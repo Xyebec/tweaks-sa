@@ -32,6 +32,9 @@ static struct MinorTweaksSettings {
     struct Hud {
         bool always_show_ammo;
     } hud;
+    struct Visuals {
+        bool disable_speed_blur;
+    } visuals;
 } settings;
 
 void minor_tweaks::ReadConfig(const Config& config) {
@@ -151,5 +154,9 @@ void minor_tweaks::Apply() {
 
         // Show actual flamethrower ammo (the game divides by 10 by default)
         patch::set<uint8_t>(0x58940E, 0xEB);
+    }
+    
+    if (settings.visuals.disable_speed_blur) {
+        patch::nop(0x704E8A, 5);
     }
 }

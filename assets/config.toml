@@ -42,3 +42,7 @@ always-warp-gang-with-player = true
 # Displays ammo even if player has more than 9998.
 # Also displays the actual amount for the flamethrower (the game divides by 10 for some reason).
 always-show-ammo = true
+
+[tweaks.visuals]
+# Disables speed blur effect.
+disable-speed-blur = true
