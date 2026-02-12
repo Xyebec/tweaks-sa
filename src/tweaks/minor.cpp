@@ -29,6 +29,9 @@ static struct MinorTweaksSettings {
         bool sprint_everywhere;
         bool always_warp_gang_with_player;
     } gameplay;
+    struct Hud {
+        bool always_show_ammo;
+    } hud;
 } settings;
 
 void minor_tweaks::ReadConfig(const Config& config) {
@@ -135,5 +138,18 @@ void minor_tweaks::Apply() {
     if (settings.gameplay.always_warp_gang_with_player) {
         // Unconditionally call `CEntryExit::WarpGangWithPlayer`
         patch::nop(0x440A1C, 2);
+    }
+    
+    if (settings.hud.always_show_ammo) {
+        // Show ammo even if `totalAmmo >= 9999`
+        patch::nop(0x58955A, 6);
+        patch::nop(0x58956B, 6);
+
+        // Prevent overriding actual ammo value with `9999`
+        patch::nop(0x589436, 2); // Flamethrower
+        patch::nop(0x589472, 5); // Other weapons
+
+        // Show actual flamethrower ammo (the game divides by 10 by default)
+        patch::set<uint8_t>(0x58940E, 0xEB);
     }
 }

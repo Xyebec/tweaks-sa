@@ -37,3 +37,8 @@ sprint-everywhere = true
 
 # Recruited gang members will follow the player into every interior.
 always-warp-gang-with-player = true
+
+[tweaks.hud]
+# Displays ammo even if player has more than 9998.
+# Also displays the actual amount for the flamethrower (the game divides by 10 for some reason).
+always-show-ammo = true
