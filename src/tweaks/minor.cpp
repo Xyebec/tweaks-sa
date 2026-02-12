@@ -24,6 +24,7 @@ static struct MinorTweaksSettings {
     struct Gameplay {
         bool climb_everywhere;
         bool disable_extra_air_resistance;
+        bool duck_with_any_weapon;
         bool sprint_everywhere;
     } gameplay;
 } settings;
@@ -104,6 +105,11 @@ void minor_tweaks::Apply() {
         patch::copy_slice(0x72DDD0, { 0x31, 0xC0, 0xC3 }); // xor eax, eax ; ret
     }
 
+    if (settings.gameplay.duck_with_any_weapon) {
+        // Skip all weapon-related checks
+        patch::set<uint8_t>(0x692651, 0xEB);
+    }
+    
     if (settings.gameplay.sprint_everywhere) {
         // Make `SurfaceInfos_c::CantSprintOn` always return `false`
         patch::copy_slice(0x55E870, { 0x31, 0xC0, 0xC2, 0x04, 0x00 }); // xor eax, eax ; ret 4
