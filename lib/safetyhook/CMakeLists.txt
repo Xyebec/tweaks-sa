@@ -22,14 +22,6 @@ add_library(safetyhook)
 target_sources(safetyhook PRIVATE ${safetyhook_SOURCES})
 
 if(BUILD_SHARED_LIBS) # shared
-	# target_compile_definitions(safetyhook PUBLIC
-	# 	SAFETYHOOK_SHARED_LIB
-	# )
-
-	# target_compile_definitions(safetyhook PRIVATE
-	# 	SAFETYHOOK_BUILDING
-	# )
-
     target_compile_definitions(safetyhook
       PUBLIC
         SAFETYHOOK_SHARED_LIB
@@ -70,7 +62,7 @@ if(SAFETYHOOK_USE_CXXMODULES)
 endif()
 
 if(SAFETYHOOK_DISABLE_X86_SSE)
-    target_compile_definitions(safetyhook INTERFACE SAFETYHOOK_DISABLE_X86_SSE)
+    target_compile_definitions(safetyhook PUBLIC SAFETYHOOK_DISABLE_X86_SSE)
 endif()
 
 # include(GNUInstallDirs)
