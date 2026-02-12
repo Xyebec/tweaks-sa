@@ -37,11 +37,7 @@ target_include_directories(tweaks_sa
     lib/
 )
 
-file(COPY_FILE
-    "${CMAKE_CURRENT_SOURCE_DIR}/assets/config.toml"
-    "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.toml"
-    ONLY_IF_DIFFERENT
-)
+configure_file(assets/config.toml ${PROJECT_NAME}.toml COPYONLY)
 
 if(NOT MSVC AND CMAKE_BUILD_TYPE STREQUAL "Release")
     add_custom_command(
