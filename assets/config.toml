@@ -18,6 +18,9 @@ ganton-garage-four-slots = true
 scorched-cj = true
 
 [tweaks.gameplay]
+# Allows climbing in interiors.
+climb-everywhere = true
+
 # Allows sprinting on any surface during any mission,
 # during the animation of putting on/taking off goggles,
 # and while standing on entities (trains).

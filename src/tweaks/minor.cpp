@@ -22,6 +22,7 @@ static struct MinorTweaksSettings {
         bool scorched_cj;
     } fixes;
     struct Gameplay {
+        bool climb_everywhere;
         bool sprint_everywhere;
     } gameplay;
 } settings;
@@ -89,6 +90,13 @@ void minor_tweaks::Apply() {
     if (settings.fixes.scorched_cj) {
         // Skip `!CPed::IsPlayer` check
         patch::nop(0x53A669, 6);
+    }
+
+    if (settings.gameplay.climb_everywhere) {
+        // Skip `!CGame::currArea` check in the `CTaskSimpleJump::ProcessPed`
+        patch::nop(0x680CA4, 2);
+        // Skip `!CGame::currArea` check in the `CTaskSimpleInAir::ProcessPed`
+        patch::nop(0x680AC4, 6);
     }
 
     if (settings.gameplay.sprint_everywhere) {
