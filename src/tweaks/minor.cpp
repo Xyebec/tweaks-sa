@@ -5,6 +5,7 @@
 #include "EntryExit.h"
 #include "Game.h"
 #include "Pad.h"
+#include "Ped.h"
 #include "Timer.h"
 #include "common.h"
 #include "config.h"
@@ -28,6 +29,11 @@ static struct MinorTweaksSettings {
         bool jump_with_heavy_weapons;
         bool sprint_everywhere;
         bool always_warp_gang_with_player;
+        struct ClimbableVehicles {
+            bool enabled;
+            bool ignore_col_spheres;
+            bool allow_vaulting;
+        } climbable_vehicles;
     } gameplay;
     struct Hud {
         bool always_show_ammo;
@@ -144,6 +150,53 @@ void minor_tweaks::Apply() {
         patch::nop(0x440A1C, 2);
     }
     
+    // TODO: rearrange OG code so it checks both vehicles and objects
+    if (settings.gameplay.climbable_vehicles.enabled) {
+        // Skip vehicle type checks in `CTaskSimpleClimb::ScanToGrabSectorList`
+        patch::jmp_short(0x67DF84, 0x67DFB4);
+
+        // Do not abort `CTaskSimpleClimb::ProcessPed` on moving trains
+        patch::set<uint8_t>(0x680E46, 0xEB);
+
+        if (settings.gameplay.climbable_vehicles.ignore_col_spheres) {
+            // Ignore collision spheres for other vehicle types too
+            patch::nop(0x67E027, 2);
+        }
+
+        // Disable vehicle-to-ped collision
+        static auto hook1 = safetyhook::create_mid(0x680E86, [](safetyhook::Context& ctx) {
+            auto* ped = reinterpret_cast<CPed*>(ctx.edi);
+            auto* vehicle = reinterpret_cast<CVehicle*>(ctx.ecx);
+
+            if (!vehicle->m_pEntityIgnoredCollision) {
+                vehicle->m_pEntityIgnoredCollision = ped;
+            }
+        });
+
+        // Re-enable vehicle-to-ped collision
+        static constexpr auto ReenableCollision = [](CPed* ped) {
+            auto* vehicle = static_cast<CVehicle*>(ped->m_pEntityIgnoredCollision);
+
+            if (vehicle->m_pEntityIgnoredCollision == ped) {
+                vehicle->m_pEntityIgnoredCollision = nullptr;
+            }
+        };
+
+        static auto hook2 = safetyhook::create_mid(0x680DFE, [](safetyhook::Context& ctx) {
+            auto* ped = reinterpret_cast<CPed*>(ctx.eax);
+            ReenableCollision(ped);
+        });
+        static auto hook3 = safetyhook::create_mid(0x6814CE, [](safetyhook::Context& ctx) {
+            auto* ped = reinterpret_cast<CPed*>(ctx.edi);
+            ReenableCollision(ped);
+        });
+
+        if (settings.gameplay.climbable_vehicles.allow_vaulting) {
+            // Remove `!m_ClimbEntity->IsVehicle()` check for `CTaskSimpleClimb::TestForVault`
+            patch::nop(0x68052D, 2);
+        }
+    }
+    
     if (settings.hud.always_show_ammo) {
         // Show ammo even if `totalAmmo >= 9999`
         patch::nop(0x58955A, 6);
@@ -160,7 +213,7 @@ void minor_tweaks::Apply() {
     if (settings.visuals.disable_heat_haze) {
         patch::nop(0x705116, 5);
     }
-    
+
     if (settings.visuals.disable_speed_blur) {
         patch::nop(0x704E8A, 5);
     }

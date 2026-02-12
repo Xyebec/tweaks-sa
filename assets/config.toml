@@ -38,6 +38,13 @@ sprint-everywhere = true
 # Recruited gang members will follow the player into every interior.
 always-warp-gang-with-player = true
 
+# Allows climbing on vehicles other than boats and trains.
+# Climbing task is no longer aborted on moving trains.
+#
+# ignore-col-spheres: Collision spheres may prevent climbing on some vehicles at certain angles.
+# 'allow-vaulting': Allows CJ to vault on some vehicle parts that are thin enough, but it may not look right.
+climbable-vehicles = { enabled = true, ignore-col-spheres = true, allow-vaulting = true }
+
 [tweaks.hud]
 # Displays ammo even if player has more than 9998.
 # Also displays the actual amount for the flamethrower (the game divides by 10 for some reason).
