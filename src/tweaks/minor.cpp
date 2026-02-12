@@ -1,6 +1,10 @@
 #include "minor.h"
+#include "Bike.h"
 #include "Camera.h"
+#include "CarAI.h"
 #include "Pad.h"
+#include "Timer.h"
+#include "common.h"
 #include "config.h"
 #include "patcher.h"
 #include "safetyhook/easy.hpp"
@@ -8,6 +12,7 @@
 static struct MinorTweaksSettings {
     struct Fixes {
         bool fix_car_generator_blockage;
+        bool fix_police_bike_siren;
         bool fix_zoom_uncrouching;
         bool ganton_garage_four_slots;
     } fixes;
@@ -27,6 +32,22 @@ void minor_tweaks::Apply() {
             auto *const radius = reinterpret_cast<float*>(ctx.ecx + 0x24);
             *reinterpret_cast<float*>(ctx.esp + 0x48 - 0x38) = *radius * 0.05f;
             ctx.eip = 0x6F3304;
+        });
+    }
+
+    if (settings.fixes.fix_police_bike_siren) {
+        static auto hook = safetyhook::create_mid(0x6BBC18, [](safetyhook::Context& ctx) {
+            auto* self = reinterpret_cast<CBike*>(ctx.esi);
+        
+            // Code taken from `CAutomobile::ProcessControl` (0x6B2BB1)
+            if (self->bSirenOrAlarm
+                && (CTimer::m_FrameCounter & 7) == 5
+                && self->UsesSiren()
+                // && self->m_nModelIndex != MODEL_MRWHOOP
+                && FindPlayerVehicle(-1, false) == self
+            ) {
+                CCarAI::MakeWayForCarWithSiren(self);
+            }
         });
     }
 
