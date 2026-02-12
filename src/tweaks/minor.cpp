@@ -25,6 +25,7 @@ static struct MinorTweaksSettings {
         bool climb_everywhere;
         bool disable_extra_air_resistance;
         bool duck_with_any_weapon;
+        bool jump_with_heavy_weapons;
         bool sprint_everywhere;
     } gameplay;
 } settings;
@@ -110,6 +111,11 @@ void minor_tweaks::Apply() {
         patch::set<uint8_t>(0x692651, 0xEB);
     }
     
+    if (settings.gameplay.jump_with_heavy_weapons) {
+        // Remove `CWeaponInfo.flags.bHeavy` check
+        patch::nop(0x6886F8, 6);
+    }
+
     if (settings.gameplay.sprint_everywhere) {
         // Make `SurfaceInfos_c::CantSprintOn` always return `false`
         patch::copy_slice(0x55E870, { 0x31, 0xC0, 0xC2, 0x04, 0x00 }); // xor eax, eax ; ret 4

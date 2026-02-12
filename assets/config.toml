@@ -27,6 +27,9 @@ disable-extra-air-resistance = true
 # Allows ducking with any weapon, regardless of its type.
 duck-with-any-weapon = true
 
+# Allows jumping with weapons marked as heavy in the weapon.dat, such as a minigun.
+jump-with-heavy-weapons = true
+
 # Allows sprinting on any surface during any mission,
 # during the animation of putting on/taking off goggles,
 # and while standing on entities (trains).
