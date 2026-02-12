@@ -14,6 +14,9 @@ fix-zoom-uncrouching = true
 # Makes the number of garage slots in Ganton consistent with other garages.
 ganton-garage-four-slots = true
 
+# When CJ dies from fire, his body will char like other pedestrians'.
+scorched-cj = true
+
 [tweaks.gameplay]
 # Allows sprinting on any surface during any mission,
 # during the animation of putting on/taking off goggles,

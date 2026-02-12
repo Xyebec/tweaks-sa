@@ -19,6 +19,7 @@ static struct MinorTweaksSettings {
         bool fix_police_bike_siren;
         bool fix_zoom_uncrouching;
         bool ganton_garage_four_slots;
+        bool scorched_cj;
     } fixes;
     struct Gameplay {
         bool sprint_everywhere;
@@ -83,6 +84,11 @@ void minor_tweaks::Apply() {
     if (settings.fixes.ganton_garage_four_slots) {
         patch::copy_slice(0x44BF1D, { 0xB1, 0x01, 0x90 }); // mov cl, 1 ; nop
         patch::copy_slice(0x44BD90, { 0xB0, 0x01, 0x90 }); // mov al, 1 ; nop
+    }
+    
+    if (settings.fixes.scorched_cj) {
+        // Skip `!CPed::IsPlayer` check
+        patch::nop(0x53A669, 6);
     }
 
     if (settings.gameplay.sprint_everywhere) {
