@@ -1,0 +1,5 @@
+[tweaks.gameplay]
+# Allows sprinting on any surface during any mission,
+# during the animation of putting on/taking off goggles,
+# and while standing on entities (trains).
+sprint-everywhere = true
