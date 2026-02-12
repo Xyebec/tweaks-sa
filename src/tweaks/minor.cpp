@@ -23,6 +23,7 @@ static struct MinorTweaksSettings {
     } fixes;
     struct Gameplay {
         bool climb_everywhere;
+        bool disable_extra_air_resistance;
         bool sprint_everywhere;
     } gameplay;
 } settings;
@@ -97,6 +98,10 @@ void minor_tweaks::Apply() {
         patch::nop(0x680CA4, 2);
         // Skip `!CGame::currArea` check in the `CTaskSimpleInAir::ProcessPed`
         patch::nop(0x680AC4, 6);
+    }
+
+    if (settings.gameplay.disable_extra_air_resistance) {
+        patch::copy_slice(0x72DDD0, { 0x31, 0xC0, 0xC3 }); // xor eax, eax ; ret
     }
 
     if (settings.gameplay.sprint_everywhere) {

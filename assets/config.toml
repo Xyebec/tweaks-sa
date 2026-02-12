@@ -21,6 +21,9 @@ scorched-cj = true
 # Allows climbing in interiors.
 climb-everywhere = true
 
+# Removes artificial slowdown of player's vehicle in special cull zones.
+disable-extra-air-resistance = true
+
 # Allows sprinting on any surface during any mission,
 # during the animation of putting on/taking off goggles,
 # and while standing on entities (trains).
