@@ -44,5 +44,8 @@ always-warp-gang-with-player = true
 always-show-ammo = true
 
 [tweaks.visuals]
+# Disables heat haze effect.
+disable-heat-haze = true
+
 # Disables speed blur effect.
 disable-speed-blur = true

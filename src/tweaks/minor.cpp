@@ -33,6 +33,7 @@ static struct MinorTweaksSettings {
         bool always_show_ammo;
     } hud;
     struct Visuals {
+        bool disable_heat_haze;
         bool disable_speed_blur;
     } visuals;
 } settings;
@@ -154,6 +155,10 @@ void minor_tweaks::Apply() {
 
         // Show actual flamethrower ammo (the game divides by 10 by default)
         patch::set<uint8_t>(0x58940E, 0xEB);
+    }
+    
+    if (settings.visuals.disable_heat_haze) {
+        patch::nop(0x705116, 5);
     }
     
     if (settings.visuals.disable_speed_blur) {
