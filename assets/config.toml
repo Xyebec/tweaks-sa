@@ -34,3 +34,6 @@ jump-with-heavy-weapons = true
 # during the animation of putting on/taking off goggles,
 # and while standing on entities (trains).
 sprint-everywhere = true
+
+# Recruited gang members will follow the player into every interior.
+always-warp-gang-with-player = true

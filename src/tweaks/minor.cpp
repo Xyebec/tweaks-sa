@@ -27,6 +27,7 @@ static struct MinorTweaksSettings {
         bool duck_with_any_weapon;
         bool jump_with_heavy_weapons;
         bool sprint_everywhere;
+        bool always_warp_gang_with_player;
     } gameplay;
 } settings;
 
@@ -129,5 +130,10 @@ void minor_tweaks::Apply() {
 
         // Allow sprint on entities (trains)
         patch::set<uint8_t>(0x6885A5, 0xEB);
+    }
+    
+    if (settings.gameplay.always_warp_gang_with_player) {
+        // Unconditionally call `CEntryExit::WarpGangWithPlayer`
+        patch::nop(0x440A1C, 2);
     }
 }
