@@ -7,6 +7,7 @@
 static struct MinorTweaksSettings {
     struct Fixes {
         bool fix_zoom_uncrouching;
+        bool ganton_garage_four_slots;
     } fixes;
     struct Gameplay {
         bool sprint_everywhere;
@@ -33,6 +34,11 @@ void minor_tweaks::Apply() {
         patch::call(0x688018, Hook::CPad__JumpJustDownNo1stPersonAim); // Zoom in
     }
     
+    if (settings.fixes.ganton_garage_four_slots) {
+        patch::copy_slice(0x44BF1D, { 0xB1, 0x01, 0x90 }); // mov cl, 1 ; nop
+        patch::copy_slice(0x44BD90, { 0xB0, 0x01, 0x90 }); // mov al, 1 ; nop
+    }
+
     if (settings.gameplay.sprint_everywhere) {
         // Make `SurfaceInfos_c::CantSprintOn` always return `false`
         patch::copy_slice(0x55E870, { 0x31, 0xC0, 0xC2, 0x04, 0x00 }); // xor eax, eax ; ret 4

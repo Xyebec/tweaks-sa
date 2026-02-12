@@ -2,6 +2,9 @@
 # Fixes uncrouching due to PS2 button collisions when using first person weapons such as a sniper rifle.
 fix-zoom-uncrouching = true
 
+# Makes the number of garage slots in Ganton consistent with other garages.
+ganton-garage-four-slots = true
+
 [tweaks.gameplay]
 # Allows sprinting on any surface during any mission,
 # during the animation of putting on/taking off goggles,
