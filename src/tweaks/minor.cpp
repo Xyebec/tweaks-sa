@@ -2,15 +2,19 @@
 #include "Bike.h"
 #include "Camera.h"
 #include "CarAI.h"
+#include "EntryExit.h"
+#include "Game.h"
 #include "Pad.h"
 #include "Timer.h"
 #include "common.h"
 #include "config.h"
 #include "patcher.h"
+#include "safetyhook/context.hpp"
 #include "safetyhook/easy.hpp"
 
 static struct MinorTweaksSettings {
     struct Fixes {
+        bool dont_cull_world_on_enex;
         bool fix_car_generator_blockage;
         bool fix_police_bike_siren;
         bool fix_zoom_uncrouching;
@@ -26,6 +30,16 @@ void minor_tweaks::ReadConfig(const Config& config) {
 }
 
 void minor_tweaks::Apply() {
+    if (settings.fixes.dont_cull_world_on_enex) {
+        // Disable `CGame::currArea = CEntryExit::ms_spawnPoint->m_nArea`
+        // for `CEntryExitManager::ms_exitEnterState == 0`
+        patch::nop(0x440601, 6);
+        // Set area code later
+        static auto hook = safetyhook::create_mid(0x4406AD, [](safetyhook::Context& /*ctx*/) {
+            CGame::currArea = CEntryExit::ms_spawnPoint->m_nArea;
+        });
+    }
+    
     // TODO: figure out a better approach
     if (settings.fixes.fix_car_generator_blockage) {
         static auto hook = safetyhook::create_mid(0x6F32FD, [](safetyhook::Context& ctx) {

@@ -1,4 +1,7 @@
 [tweaks.fixes]
+# Keeps rendering world as is when changing interior via ENEX marker.
+dont-cull-world-on-enex = true
+
 # Reduces radius of the CCarGenerator::CheckForBlockage by 20 times, allowing Hunter to spawn next to the Leviathan.
 fix-car-generator-blockage = true
 
