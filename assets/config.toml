@@ -1,4 +1,7 @@
 [tweaks.fixes]
+# Reduces radius of the CCarGenerator::CheckForBlockage by 20 times, allowing Hunter to spawn next to the Leviathan.
+fix-car-generator-blockage = true
+
 # Fixes uncrouching due to PS2 button collisions when using first person weapons such as a sniper rifle.
 fix-zoom-uncrouching = true
 

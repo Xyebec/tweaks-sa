@@ -3,9 +3,11 @@
 #include "Pad.h"
 #include "config.h"
 #include "patcher.h"
+#include "safetyhook/easy.hpp"
 
 static struct MinorTweaksSettings {
     struct Fixes {
+        bool fix_car_generator_blockage;
         bool fix_zoom_uncrouching;
         bool ganton_garage_four_slots;
     } fixes;
@@ -19,6 +21,15 @@ void minor_tweaks::ReadConfig(const Config& config) {
 }
 
 void minor_tweaks::Apply() {
+    // TODO: figure out a better approach
+    if (settings.fixes.fix_car_generator_blockage) {
+        static auto hook = safetyhook::create_mid(0x6F32FD, [](safetyhook::Context& ctx) {
+            auto *const radius = reinterpret_cast<float*>(ctx.ecx + 0x24);
+            *reinterpret_cast<float*>(ctx.esp + 0x48 - 0x38) = *radius * 0.05f;
+            ctx.eip = 0x6F3304;
+        });
+    }
+
     if (settings.fixes.fix_zoom_uncrouching) {
         struct Hook {
             static bool __fastcall CPad__GetSprintNo1stPersonAim(CPad* self, uintptr_t /*edx*/) {
