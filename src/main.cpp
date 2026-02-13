@@ -1,4 +1,5 @@
 #include "config.h"
+#include "tweaks/draw_cols.h"
 #include "tweaks/minor.h"
 
 #ifndef NOMINMAX
@@ -57,13 +58,16 @@ extern BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID /*reserved*/
 
     try {
         minor_tweaks::ReadConfig(*config);
-        minor_tweaks::Apply();
+        draw_cols::ReadConfig(*config);
     } catch (const std::exception& e) {
         const auto caption = std::format("Unable to deserialize '{}'", configPath.filename().string());
         MessageBoxA(nullptr, e.what(), caption.data(), MB_OK | MB_ICONERROR);
         exit(EXIT_FAILURE);
         return FALSE;
     }
+
+    minor_tweaks::Apply();
+    draw_cols::Apply();
 
     return TRUE;
 }

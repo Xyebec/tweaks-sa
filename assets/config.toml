@@ -56,3 +56,13 @@ disable-heat-haze = true
 
 # Disables speed blur effect.
 disable-speed-blur = true
+
+[debug.draw-cols]
+enabled = true
+hotkey = 0x7A # VK_F11
+color-bound-box    = 0xFFFF0000 # Red
+color-bound-sphere = 0xFFFFFFFF # White
+color-sphere       = 0xFFFF00FF # Magenta
+color-line         = 0xFF00FFFF # Cyan
+color-box          = 0xFFFFFFFF # White
+color-triangle     = 0xFF00FF00 # Green

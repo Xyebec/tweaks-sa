@@ -1,0 +1,241 @@
+#include "draw_cols.h"
+#include "ColBox.h"
+#include "ColLine.h"
+#include "ColModel.h"
+#include "ColSphere.h"
+#include "ColTriangle.h"
+#include "CollisionData.h"
+#include "Entity.h"
+#include "Matrix.h"
+#include "ModelInfo.h"
+#include "Renderer.h"
+#include "config.h"
+#include "rwcore.h"
+#include "rwplcore.h"
+#include "safetyhook/easy.hpp"
+#include "safetyhook/inline_hook.hpp"
+#include <span>
+#include <vector>
+
+class ImmRenderer final {
+public:
+    void AddPrimitive(
+        std::span<const RwImVertexIndex> indices,
+        std::span<const RwIm3DVertex> vertices
+    ) {
+        if (m_vertices.size() + indices.size() > std::numeric_limits<RwImVertexIndex>::max()) {
+            RenderAndFlush();
+        }
+
+        const auto offset = static_cast<RwImVertexIndex>(m_vertices.size());
+        for (const auto index : indices) {
+            m_indices.emplace_back(offset + index);
+        }
+
+        m_vertices.insert(m_vertices.end(), vertices.begin(), vertices.end());
+    }
+
+    void AddCube(const CMatrix& matrix, const CVector& min, const CVector& max, RwUInt32 color) {
+        static constexpr RwImVertexIndex indices[] = {
+            0, 1,    0, 2,    0, 3,    4, 1,
+            4, 7,    4, 3,    5, 1,    5, 7,
+            5, 2,    6, 7,    6, 2,    6, 3,
+        };
+
+        const RwIm3DVertex vertices[] = {
+            { .objVertex = matrix * min, .color = color },
+            { .objVertex = matrix * CVector{min.x, min.y, max.z}, .color = color },
+            { .objVertex = matrix * CVector{max.x, min.y, min.z}, .color = color },
+            { .objVertex = matrix * CVector{min.x, max.y, min.z}, .color = color },
+            { .objVertex = matrix * CVector{min.x, max.y, max.z}, .color = color },
+            { .objVertex = matrix * CVector{max.x, min.y, max.z}, .color = color },
+            { .objVertex = matrix * CVector{max.x, max.y, min.z}, .color = color },
+            { .objVertex = matrix * max, .color = color },
+        };
+
+        AddPrimitive(indices, vertices);
+    }
+
+    void AddTriangle(const CMatrix& matrix, const CVector& a, const CVector& b, const CVector& c, RwUInt32 color) {
+        static constexpr RwImVertexIndex indices[] = {
+            0, 1,    1, 2,    2, 0
+        };
+
+        const RwIm3DVertex vertices[] = {
+            { .objVertex = matrix * a, .color = color },
+            { .objVertex = matrix * b, .color = color },
+            { .objVertex = matrix * c, .color = color },
+        };
+
+        AddPrimitive(indices, vertices);
+    }
+
+    void AddSphere(const CMatrix& matrix, const CVector& sphereCenter, float radius, RwUInt32 color) {
+        const auto center = matrix * sphereCenter;
+
+        static constexpr RwImVertexIndex indices[] = {
+            5, 0,    0, 4,    4, 1,    1, 5,
+            5, 2,    2, 4,    4, 3,    3, 5,
+        };
+        
+        const RwIm3DVertex vertices[] = {
+            { .objVertex = {center.x - radius, center.y, center.z}, .color = color },
+            { .objVertex = {center.x + radius, center.y, center.z}, .color = color },
+            { .objVertex = {center.x, center.y - radius, center.z}, .color = color },
+            { .objVertex = {center.x, center.y + radius, center.z}, .color = color },
+            { .objVertex = {center.x, center.y, center.z - radius}, .color = color },
+            { .objVertex = {center.x, center.y, center.z + radius}, .color = color },
+        };
+
+        AddPrimitive(indices, vertices);
+    }
+
+    void AddLine(const CMatrix& matrix, const CVector& start, const CVector& end, RwUInt32 color) {
+        static constexpr RwImVertexIndex indices[] = {
+            0, 1
+        };
+
+        const RwIm3DVertex vertices[] = {
+            { .objVertex = matrix * start, .color = color },
+            { .objVertex = matrix * end,   .color = color },
+        };
+
+        AddPrimitive(indices, vertices);
+    }
+
+    void RenderAndFlush() {
+        if (RwIm3DTransform(m_vertices.data(), m_vertices.size(), nullptr, 0) != nullptr) {
+            RwIm3DRenderIndexedPrimitive(rwPRIMTYPELINELIST, m_indices.data(), static_cast<RwInt32>(m_indices.size()));
+            RwIm3DEnd();
+        }
+        
+        m_vertices.clear();
+        m_indices.clear();
+    }
+
+    void ResetBuffers() {
+        m_vertices = {};
+        m_indices = {};
+    }
+
+private:
+    std::vector<RwIm3DVertex>    m_vertices{};
+    std::vector<RwImVertexIndex> m_indices{};
+};
+
+static ImmRenderer s_renderer;
+
+static struct DrawCols {
+    bool     enabled;
+    uint32_t hotkey;
+    // A R G B colors
+    RwUInt32 color_bound_box;
+    RwUInt32 color_bound_sphere;
+    RwUInt32 color_sphere;
+    RwUInt32 color_line;
+    RwUInt32 color_box;
+    RwUInt32 color_triangle;
+} settings;
+
+static void CCollision__DrawColModel(const CMatrix& matrix, const CColModel& colModel) {
+    const auto& boundBox = colModel.m_boundBox;
+    s_renderer.AddCube(matrix, boundBox.m_vecMin, boundBox.m_vecMax, settings.color_bound_box);
+
+    const auto& boundSphere = colModel.m_boundSphere;
+    s_renderer.AddSphere(matrix, boundSphere.m_vecCenter, boundSphere.m_fRadius, settings.color_bound_sphere);
+
+    auto* colData = colModel.m_pColData;
+    if (colData == nullptr) {
+        return;
+    }
+
+    for (const auto& sphere : std::span{colData->m_pSpheres, colData->m_nNumSpheres}) {
+        s_renderer.AddSphere(matrix, sphere.m_vecCenter, sphere.m_fRadius, settings.color_sphere);
+    }
+
+    for (const auto& line : std::span{colData->m_pLines, colData->m_nNumLines}) {
+        s_renderer.AddLine(matrix, line.m_vecStart, line.m_vecEnd, settings.color_line);
+    }
+    
+    for (const auto& box : std::span{colData->m_pBoxes, colData->m_nNumBoxes}) {
+        s_renderer.AddCube(matrix, box.m_vecMin, box.m_vecMax, settings.color_box);
+    }
+
+    for (const auto& triangle : std::span{colData->m_pTriangles, colData->m_nNumTriangles}) {
+        CVector v1; colData->GetTrianglePoint(v1, triangle.m_nVertA);
+        CVector v2; colData->GetTrianglePoint(v2, triangle.m_nVertB);
+        CVector v3; colData->GetTrianglePoint(v3, triangle.m_nVertC);
+        s_renderer.AddTriangle(matrix, v1, v2, v3, settings.color_triangle);
+    }
+}
+
+static void CRenderer__RenderCollisionLines() {
+    static constexpr auto SetRenderState = [](RwRenderState state, auto value) {
+        return RwRenderStateSet(state, reinterpret_cast<void*>(value));
+    };
+
+    //SetRenderState(rwRENDERSTATEZWRITEENABLE, true);
+    //SetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, true);
+    //SetRenderState(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
+    //SetRenderState(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCALPHA);
+    SetRenderState(rwRENDERSTATETEXTURERASTER, NULL);
+    
+    for (auto* entity : std::span{CRenderer::ms_aVisibleEntityPtrs, CRenderer::ms_nNoOfVisibleEntities}) {
+        const auto* matrix = entity->GetMatrix();
+        if (matrix == nullptr) {
+            continue;
+        }
+
+        const auto index = entity->m_nModelIndex;
+        if (CModelInfo::ms_modelInfoPtrs[index] == nullptr) {
+            continue;
+        }
+
+        const auto* colModel = CModelInfo::ms_modelInfoPtrs[index]->m_pColModel;
+        if (colModel == nullptr) {
+            continue;
+        }
+
+        CCollision__DrawColModel(*matrix, *colModel);
+    }
+
+    s_renderer.RenderAndFlush();
+
+    //SetRenderState(rwRENDERSTATESRCBLEND, 5);
+    //SetRenderState(rwRENDERSTATEDESTBLEND, 6);
+    //SetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, false);
+    //SetRenderState(rwRENDERSTATEZWRITEENABLE, true);
+    //SetRenderState(rwRENDERSTATEZTESTENABLE, true);
+}
+
+static safetyhook::InlineHook orig_CRenderer__RenderFirstPersonVehicle;
+static void Hook_CRenderer__RenderFirstPersonVehicle() {
+    orig_CRenderer__RenderFirstPersonVehicle.unsafe_ccall();
+
+    static bool s_showCollision = false;
+    static bool keystate = false;
+    if ((GetAsyncKeyState(static_cast<int>(settings.hotkey)) & 0x8000) != 0) {
+        if (!keystate) {
+            keystate = true;
+            s_showCollision = !s_showCollision;
+            if (!s_showCollision) {
+                s_renderer.ResetBuffers();
+            }
+        }
+    } else {
+        keystate = false;
+    }
+
+    if (s_showCollision) {
+        CRenderer__RenderCollisionLines();
+    }
+}
+
+void draw_cols::ReadConfig(const Config& config) {
+    config.Deserialize("debug.draw-cols", settings);
+}
+
+void draw_cols::Apply() {
+    orig_CRenderer__RenderFirstPersonVehicle
+        = safetyhook::create_inline(0x53E222, Hook_CRenderer__RenderFirstPersonVehicle);
+}
