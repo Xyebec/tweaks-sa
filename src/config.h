@@ -79,7 +79,8 @@ public:
 
     template <typename T>
     void Deserialize(std::string_view key, T& out) const {
-        Read(key, m_root.get(key), out);
+        const auto view = m_root.at_path(key);
+        Read(key, view.node(), out);
     }
 
 private:
