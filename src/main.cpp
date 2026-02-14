@@ -1,4 +1,5 @@
 #include "config.h"
+#include "tweaks/definitive_driveby.h"
 #include "tweaks/draw_cols.h"
 #include "tweaks/minor.h"
 
@@ -57,8 +58,9 @@ extern BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID /*reserved*/
     }
 
     try {
-        minor_tweaks::ReadConfig(*config);
+        definitive_driveby::ReadConfig(*config);
         draw_cols::ReadConfig(*config);
+        minor_tweaks::ReadConfig(*config);
     } catch (const std::exception& e) {
         const auto caption = std::format("Unable to deserialize '{}'", configPath.filename().string());
         MessageBoxA(nullptr, e.what(), caption.data(), MB_OK | MB_ICONERROR);
@@ -66,8 +68,9 @@ extern BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID /*reserved*/
         return FALSE;
     }
 
-    minor_tweaks::Apply();
+    definitive_driveby::Apply();
     draw_cols::Apply();
+    minor_tweaks::Apply();
 
     return TRUE;
 }

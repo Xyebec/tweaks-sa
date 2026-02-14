@@ -13,7 +13,7 @@
 #include "safetyhook/context.hpp"
 #include "safetyhook/easy.hpp"
 
-static struct MinorTweaksSettings {
+static struct MinorTweaks {
     struct Fixes {
         bool dont_cull_world_on_enex;
         bool fix_car_generator_blockage;

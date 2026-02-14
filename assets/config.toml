@@ -57,6 +57,11 @@ disable-heat-haze = true
 # Disables speed blur effect.
 disable-speed-blur = true
 
+[definitive-drive-by]
+enabled = true
+angle-front = 45.0 # 0-90 degrees
+angle-back  = 75.0 # 0-90 degrees
+
 [debug.draw-cols]
 enabled = true
 hotkey = 0x7A # VK_F11
