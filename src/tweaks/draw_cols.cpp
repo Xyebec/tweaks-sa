@@ -236,6 +236,10 @@ void draw_cols::ReadConfig(const Config& config) {
 }
 
 void draw_cols::Apply() {
+    if (!settings.enabled) {
+        return;
+    }
+    
     orig_CRenderer__RenderFirstPersonVehicle
         = safetyhook::create_inline(0x53E222, Hook_CRenderer__RenderFirstPersonVehicle);
 }
