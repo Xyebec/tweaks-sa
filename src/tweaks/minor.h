@@ -1,3 +1,5 @@
+#pragma once
+
 class Config;
 
 namespace minor_tweaks {

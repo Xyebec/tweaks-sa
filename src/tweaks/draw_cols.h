@@ -1,3 +1,5 @@
+#pragma once
+
 class Config;
 
 namespace draw_cols {
