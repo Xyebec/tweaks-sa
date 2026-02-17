@@ -1,4 +1,3 @@
-#include "minor.h"
 #include "Bike.h"
 #include "Camera.h"
 #include "CarAI.h"
@@ -44,11 +43,13 @@ static struct MinorTweaks {
     } visuals;
 } settings;
 
-void minor_tweaks::ReadConfig(const Config& config) {
+namespace minor_tweaks {
+
+extern void ReadConfig(const Config& config) {
     config.Deserialize("tweaks", settings);
 }
 
-void minor_tweaks::Apply() {
+extern void Apply() {
     if (settings.fixes.dont_cull_world_on_enex) {
         // Disable `CGame::currArea = CEntryExit::ms_spawnPoint->m_nArea`
         // for `CEntryExitManager::ms_exitEnterState == 0`
@@ -217,4 +218,6 @@ void minor_tweaks::Apply() {
     if (settings.visuals.disable_speed_blur) {
         patch::nop(0x704E8A, 5);
     }
+}
+
 }

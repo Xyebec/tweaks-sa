@@ -1,4 +1,3 @@
-#include "definitive_driveby.h"
 #include "Camera.h"
 #include "Enums/eModelID.h"
 #include "Vehicle.h"
@@ -44,11 +43,13 @@ static void Hook_DefinitiveDriveBy(safetyhook::Context& ctx) {
     }
 }
 
-void definitive_driveby::ReadConfig(const Config& config) {
+namespace definitive_driveby {
+
+extern void ReadConfig(const Config& config) {
     config.Deserialize("definitive-drive-by", settings);
 }
 
-void definitive_driveby::Apply() {
+extern void Apply() {
     if (!settings.enabled) {
         return;
     }
@@ -57,4 +58,6 @@ void definitive_driveby::Apply() {
     settings.angle_back = ToRadians(settings.angle_back);
 
     static auto hook = safetyhook::create_mid(0x742120, Hook_DefinitiveDriveBy);
+}
+
 }

@@ -1,4 +1,3 @@
-#include "fancy_map.h"
 #include "Font.h"
 #include "MenuManager.h"
 #include "Radar.h"
@@ -29,11 +28,13 @@ static struct FancyMap {
     bool cursor_without_crosshair;
 } settings;
 
-void fancy_map::ReadConfig(const Config& config) {
+namespace fancy_map {
+
+extern void ReadConfig(const Config& config) {
     config.Deserialize("fancy-map", settings);
 }
 
-void fancy_map::Apply() {
+extern void Apply() {
     if (!settings.enabled) {
         return;
     }
@@ -133,4 +134,6 @@ void fancy_map::Apply() {
 
         ctx.eip = 0x578785;
     });
+}
+
 }

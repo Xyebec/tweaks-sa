@@ -1,4 +1,3 @@
-#include "draw_cols.h"
 #include "ColBox.h"
 #include "ColLine.h"
 #include "ColModel.h"
@@ -231,15 +230,19 @@ static void Hook_CRenderer__RenderFirstPersonVehicle() {
     }
 }
 
-void draw_cols::ReadConfig(const Config& config) {
+namespace draw_cols {
+
+extern void ReadConfig(const Config& config) {
     config.Deserialize("debug.draw-cols", settings);
 }
 
-void draw_cols::Apply() {
+extern void Apply() {
     if (!settings.enabled) {
         return;
     }
     
     orig_CRenderer__RenderFirstPersonVehicle
         = safetyhook::create_inline(0x53E222, Hook_CRenderer__RenderFirstPersonVehicle);
+}
+
 }

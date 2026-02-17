@@ -1,8 +1,5 @@
 #include "config.h"
-#include "tweaks/definitive_driveby.h"
-#include "tweaks/draw_cols.h"
-#include "tweaks/fancy_map.h"
-#include "tweaks/minor.h"
+#include "tweaks/tweaks.h"
 
 #ifndef NOMINMAX
   #define NOMINMAX
@@ -59,10 +56,7 @@ extern BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID /*reserved*/
     }
 
     try {
-        definitive_driveby::ReadConfig(*config);
-        draw_cols::ReadConfig(*config);
-        fancy_map::ReadConfig(*config);
-        minor_tweaks::ReadConfig(*config);
+        ReadConfig(*config);
     } catch (const std::exception& e) {
         const auto caption = std::format("Unable to deserialize '{}'", configPath.filename().string());
         MessageBoxA(nullptr, e.what(), caption.data(), MB_OK | MB_ICONERROR);
@@ -70,10 +64,7 @@ extern BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID /*reserved*/
         return FALSE;
     }
 
-    definitive_driveby::Apply();
-    draw_cols::Apply();
-    fancy_map::Apply();
-    minor_tweaks::Apply();
+    ApplyTweaks();
 
     return TRUE;
 }
