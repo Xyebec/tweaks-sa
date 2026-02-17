@@ -87,11 +87,11 @@ extern void Apply() {
 
     if (settings.fixes.fix_zoom_uncrouching) {
         struct Hook {
-            static bool __fastcall CPad__GetSprintNo1stPersonAim(CPad* self, uintptr_t /*edx*/) {
+            static bool CALLCONV_FASTCALL CPad__GetSprintNo1stPersonAim(CPad* self, uintptr_t /*edx*/) {
                 return TheCamera.Using1stPersonWeaponMode() ? false : self->GetSprint();
             }
 
-            static bool __fastcall CPad__JumpJustDownNo1stPersonAim(CPad* self, uintptr_t /*edx*/) {
+            static bool CALLCONV_FASTCALL CPad__JumpJustDownNo1stPersonAim(CPad* self, uintptr_t /*edx*/) {
                 return TheCamera.Using1stPersonWeaponMode() ? false : self->JumpJustDown();
             }
         };
