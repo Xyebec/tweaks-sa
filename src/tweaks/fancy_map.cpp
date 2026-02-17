@@ -1,6 +1,7 @@
 #include "Font.h"
 #include "MenuManager.h"
 #include "Radar.h"
+#include "Text.h"
 #include "config.h"
 #include "Vector2D.h"
 #include "patcher.h"
@@ -26,6 +27,7 @@ static struct FancyMap {
     bool drag_to_move;
     bool fix_speed; // TODO: add speed multiplier var instead
     bool cursor_without_crosshair;
+    bool hide_help_text;
 } settings;
 
 namespace fancy_map {
@@ -77,9 +79,45 @@ extern void Apply() {
     patch::nop(0x577CC5, 6); // Left
     patch::nop(0x577CDE, 6); // Right
 
-    // Remove map help text
-    patch::nop(0x5762E7, 10); // FEH_MPB (blip 'Options' menu)
-    patch::nop(0x5762FD, 10); // FEH_MPH (general map help)
+    if (settings.hide_help_text) {
+        // Remove map help text
+        patch::nop(0x5762E7, 10); // FEH_MPB (blip options menu)
+        patch::nop(0x5762FD, 10); // FEH_MPH (general map help)
+    } else {
+        struct Hook {
+            static void CALLCONV_FASTCALL CMenuManager__DisplayHelperText(CMenuManager* self, uintptr_t /*edx*/, const char* key) {
+                const auto scaleX = self->StretchX(0.4f);
+                const auto scaleY = self->StretchY(0.5f);
+                CFont::SetScale(scaleX, scaleY);
+                CFont::SetFontStyle(eFontStyle::FONT_MENU);
+                CFont::SetOrientation(eFontAlignment::ALIGN_RIGHT);
+                CFont::SetEdge(1);
+                CFont::SetColor(CRGBA{0xFF, 0xFF, 0xFF, 0xFF});
+                
+                const auto x = static_cast<float>(RsGlobal.maximumWidth) - self->StretchX(30.0f);
+                const auto y = static_cast<float>(RsGlobal.maximumHeight) - self->StretchY(10.0f);
+                const auto* text = TheText.Get(key);
+                CFont::PrintStringFromBottom(x, y, text);
+            }
+
+            static void CFont__PrintString(float /*x*/, float /*y*/, const char* text) {
+                const auto x = static_cast<float>(RsGlobal.maximumWidth) - FrontEndMenuManager.StretchX(30.0f);
+                const auto y = static_cast<float>(RsGlobal.maximumHeight) - FrontEndMenuManager.StretchY(80.0f);
+                CFont::PrintString(x, y, text);
+            }
+        };
+        
+        // Unfortunately, simply setting `CFont::SetEdge` to `1` in `CMenuManager::DisplayHelperText`
+        // causes a segfault at 0x7FBD4A upon exiting the redefine controls menu,
+        // so it's safer to hook like this
+
+        // Add outline to the helper text
+        patch::call(0x5762EC, Hook::CMenuManager__DisplayHelperText); // FEH_MPB (blip options menu)
+        patch::call(0x576302, Hook::CMenuManager__DisplayHelperText); // FEH_MPH (general map help)
+
+        // Fix position for the zone name
+        patch::call(0x575F89, Hook::CFont__PrintString);
+    }
 
     if (settings.remove_bg) {
         // Remove the blue map background

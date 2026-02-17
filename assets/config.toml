@@ -72,6 +72,8 @@ drag-to-move = true
 cursor-without-crosshair = false
 # Removes the 20ms delay for moving and zooming the map.
 fix-speed = true
+# The help text may still occupy some space.
+hide-help-text = false
 
 [debug.draw-cols]
 enabled = true
