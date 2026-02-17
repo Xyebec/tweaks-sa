@@ -172,6 +172,23 @@ extern void Apply() {
 
         ctx.eip = 0x578785;
     });
+
+    // Make the "Back" button unclickable
+    patch::set<uint8_t>(0x5801CA, 0xEB);
+
+    struct Hook {
+        static void CFont__PrintString(float x, float y, const char* text) {
+            if (FrontEndMenuManager.m_nCurrentMenuPage != eMenuPage::MENUPAGE_MAP) {
+                CFont::PrintString(x, y, text);
+            }
+        }
+    };
+    
+    // Might not be the best approach, but simply removing button from the `MenuPages`
+    // at 0x8CE008 won't work because modloader hijacks all `MenuPages` references
+
+    // Do not render the "Back" button
+    patch::call(0x57A1FA, Hook::CFont__PrintString);
 }
 
 }
