@@ -75,6 +75,10 @@ fix-speed = true
 # The help text may still occupy some space.
 hide-help-text = false
 
+[transparent-menu]
+enabled = true
+bg-alpha = 127
+
 [debug.draw-cols]
 enabled = true
 hotkey = 0x7A # VK_F11
