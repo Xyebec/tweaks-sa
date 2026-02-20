@@ -10,6 +10,7 @@
 
 #include <windows.h>
 #include <cassert>
+#include <limits>
 
 template <typename... Args>
 static constexpr void write_sequence(patch::Address dst, const Args&... args, bool unprotect = true) {
