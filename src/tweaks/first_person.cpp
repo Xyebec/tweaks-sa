@@ -77,11 +77,6 @@ static void CMatrix_SetRotateOnlyDeg(CMatrix& self, float degX, float degY, floa
     // self.SetRotateOnly(degX * DEG_TO_RAD, degY * DEG_TO_RAD, degZ * DEG_TO_RAD); // TODO - without useless pos copying
 }
 
-static auto LerpVector(const CVector& start, const CVector& end, float t) -> CVector {
-    t = std::clamp(t, 0.0f, 1.0f);
-    return (end - start) * t + start;
-}
-
 static auto CMatrix_Rotated(const CMatrix& mat, const CMatrix& rotMat) -> CMatrix {
     CMatrix out;
     out.m_right   = rotMat.TransformVector(mat.m_right);
@@ -888,7 +883,7 @@ static void UpdateCameraInVehicle() {
                         static constexpr auto result = CVector{-0.3f, 0.0f, 0.113f};
                         static constexpr auto v90 = CQuaternion{0.11877283f, -0.19613053f, 0.67650485f, 0.6998335f};
                         auto* frame = FindAnimBlendFrameData(playerPed, BONE_ROOT)->KeyFrame;
-                        frame->translation = LerpVector(frame->translation, result, g_state.slerpLookBackAnimInCar);
+                        frame->translation = Lerp(frame->translation, result, g_state.slerpLookBackAnimInCar);
                         D3DXQuaternionSlerp(
                             frame->orientation,
                             frame->orientation,
@@ -903,7 +898,7 @@ static void UpdateCameraInVehicle() {
                     BlendLookBackAnimation(QUATS_CAR_LOOK_RIGHT, g_state.slerpLookBackAnimInCar);
                     auto* frame = FindAnimBlendFrameData(playerPed, BONE_ROOT)->KeyFrame;
                     static constexpr auto end = CVector{ 0.3f, 0.0f, 0.0f };
-                    frame->translation = LerpVector(frame->translation, end, g_state.slerpLookBackAnimInCar);
+                    frame->translation = Lerp(frame->translation, end, g_state.slerpLookBackAnimInCar);
                 }
             }
         }
