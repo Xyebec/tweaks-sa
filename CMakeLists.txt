@@ -55,7 +55,7 @@ include(FetchContent)
 FetchContent_Declare(
   pluginsdk
   GIT_REPOSITORY https://github.com/Xyebec/plugin-sdk.git
-  GIT_TAG        8449ce821f4de5159aa02ae0a2eda9bebb1aac13
+  GIT_TAG        97545fed4e95fb904e5697b04f818a0b1b0a6400
 )
 FetchContent_MakeAvailable(pluginsdk)
 target_link_libraries(tweaks_sa PRIVATE pluginsdk::gtasa)
