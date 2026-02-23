@@ -511,14 +511,14 @@ static void UpdateFlags(const CPlayerPed* ped) {
         if (g_state.flags.lockCamera || g_state.flags.isOnFoot) {
             g_state.cameraRotInCar = MatToEuler(TheCamera.m_mCameraMatrix);
             const auto playerRot = MatToEuler(*ped->m_matrix);
+
             const auto relativeX = NormalizeAngle(g_state.cameraRotInCar.x - playerRot.x);
-            if (relativeX > 180.0f) {
-                g_state.cameraRotInCar.x = -(360.0f - relativeX);
-            } else {
-                g_state.cameraRotInCar.x = relativeX;
-            }
+            g_state.cameraRotInCar.x = relativeX > 180.0f ? -(360.0f - relativeX) : relativeX;            
+
             g_state.cameraRotInCar.y = 0.0f;
-            g_state.cameraRotInCar.z = 0.0f;
+
+            const auto relativeZ = NormalizeAngle(g_state.cameraRotInCar.z - playerRot.z);
+            g_state.cameraRotInCar.z = relativeZ > 180.0f ? -(360.0f - relativeZ) : relativeZ;
         }
 
         g_state.flags.lockCamera = false;
