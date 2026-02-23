@@ -437,6 +437,7 @@ static void Update1stPersonState() {
         g_state.cameraRotOnFoot.z = GetHeading(*playerPed->m_matrix) * RAD_TO_DEG;
     }
 
+    // todo: refactor
     if (g_state.isFirstPersonOn) {
         if (IsInAnyVehicle(playerPed)) {
             if (TheCamera.m_nCarZoom == 0 && g_state.storedCarZoom == 1) {
@@ -445,11 +446,9 @@ static void Update1stPersonState() {
                 TheCamera.m_nPedZoom = 3;
 
                 Disable1stPerson();
-                TheCamera.m_bUseNearClipScript = false;
             } else {
                 g_state.storedCarZoom = TheCamera.m_nCarZoom;
                 TheCamera.m_nCarZoom = 1;
-                TheCamera.m_bUseNearClipScript = false;
             }
         } else {
             if (TheCamera.m_nPedZoom == 3 && g_state.storedPedZoom == 1) {
@@ -458,13 +457,12 @@ static void Update1stPersonState() {
                 TheCamera.m_nPedZoom = 3;
 
                 Disable1stPerson();
-                TheCamera.m_bUseNearClipScript = false;
             } else {
                 g_state.storedPedZoom = TheCamera.m_nPedZoom;
                 TheCamera.m_nPedZoom = 1;
-                TheCamera.m_bUseNearClipScript = false;
             }
         }
+        TheCamera.m_bUseNearClipScript = false;
     } else {
         if (IsInAnyVehicle(playerPed)) {
             if (TheCamera.m_nCarZoom == 0 && g_state.storedCarZoom == 1) {
@@ -485,9 +483,6 @@ static void Update1stPersonState() {
         }
     }
 }
-
-// TODO
-static void HandleGUIHotkeys() {}
 
 // TODO: consider moving switch into this func
 // and renaming it to `UpdateOnfootFlags`?
@@ -1232,15 +1227,14 @@ static void UpdateTheCamera(const CMatrix& mat) {
 }
 
 // TODO: rename vars
-static void Todo_UpdateHeadRotation_10005C90(const CMatrix& mat) {
+static void UpdateHeadRotation(const CMatrix& mat) {
     auto* playerPed = CWorld::Players[0].m_pPed;
 
     const auto* neckMat = FindBoneMatrix(playerPed, BONE_UPPERTORSO);
     // Dirty, but works
     const auto v6 = reinterpret_cast<const CMatrix*>(neckMat)->Inverted();
     auto a2 = CMatrix_Rotated(mat, v6);
-    // TODO: should z be mul by -1.0 too? decomp was fucked
-    // const auto v4 = a2.m_right * -1.0f;
+    
     const auto v4 = a2.GetLeft();
     a2.m_right = a2.m_up;
     a2.m_up = v4;
@@ -1268,7 +1262,7 @@ static safetyhook::InlineHook Orig_CCam__Process;
 static void CALLCONV_FASTCALL Hook_CCam__Process(CCam* self, uintptr_t /*edx*/) {
     // Handle first person mode switching and hotkeys
     Update1stPersonState();
-    HandleGUIHotkeys();
+    // HandleGUIHotkeys(); // todo?
 
     Orig_CCam__Process.unsafe_thiscall(self);
 
@@ -1298,7 +1292,7 @@ static void CALLCONV_FASTCALL Hook_CCam__Process(CCam* self, uintptr_t /*edx*/) 
 
     /////////////////////////
 
-    Todo_UpdateHeadRotation_10005C90(g_state.cameraMat);
+    UpdateHeadRotation(g_state.cameraMat);
 
     TheCamera.m_bUseNearClipScript = true;
     TheCamera.m_fNearClipScript = g_settings.nearClip;
