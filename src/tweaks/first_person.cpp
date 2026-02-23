@@ -193,7 +193,7 @@ struct FirstPersonFlags {
     bool dontRotateWithCam : 1;
     bool unk_x20 : 1;
     bool unk_slippedOffCurb_x40 : 1;
-    bool storedRotation : 1;
+    // bool storedRotation : 1;
 };
 
 struct FirstPersonState {
@@ -201,7 +201,7 @@ struct FirstPersonState {
     bool enableFirstPersonLater{};
     uint8_t storedPedZoom{};
     uint8_t storedCarZoom{};
-    float storedRotation{}; // stored heading (z)
+    // float storedRotation{}; // stored heading (z)
     FirstPersonFlags flags{};
     FirstPersonFlags oldFlags{};
     float unkFloatForSlerp{1.0f};
@@ -486,19 +486,18 @@ static void Update1stPersonState() {
 // TODO: consider moving switch into this func
 // and renaming it to `UpdateOnfootFlags`?
 static auto UpdateFlagsOnfoot(const CPlayerPed* ped) -> int {
-    auto* rwClump = ped->m_pRwClump;
-
-    if (RpAnimBlendClumpGetAssociation(rwClump, "Crouch_Roll_R") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Crouch_Roll_L") != nullptr
-    ) {
-        if (!g_state.flags.storedRotation) {
-            g_state.storedRotation = ped->m_fCurrentRotation;
-            g_state.flags.storedRotation = true;
-        }
-        return 2;
-    }
-    
-    g_state.flags.storedRotation = false;
+    // TODO: remove?
+    // auto* rwClump = ped->m_pRwClump;
+    // if (RpAnimBlendClumpGetAssociation(rwClump, "Crouch_Roll_R") != nullptr
+    //     || RpAnimBlendClumpGetAssociation(rwClump, "Crouch_Roll_L") != nullptr
+    // ) {
+    //     if (!g_state.flags.storedRotation) {
+    //         g_state.storedRotation = ped->m_fCurrentRotation;
+    //         g_state.flags.storedRotation = true;
+    //     }
+    //     return 2;
+    // }
+    // g_state.flags.storedRotation = false;
 
     if (CPad::GetPad(0)->bPlayerSafe) {
         return 1;
@@ -1017,7 +1016,7 @@ static void UpdateCameraInVehicle() {
 static void HandleCameraLock() {
     auto* playerPed = CWorld::Players[0].m_pPed;
 
-    if (g_state.flags.dontRotateWithCam && !g_state.flags.storedRotation) {
+    if (g_state.flags.dontRotateWithCam /*&& !g_state.flags.storedRotation*/) {
         g_state.lockedCamX -= CPad::NewMouseControllerState.x * CCamera::m_fMouseAccelHorzntal * 80.0f;
         g_state.lockedCamY += CPad::NewMouseControllerState.y * CCamera::m_fMouseAccelHorzntal * 80.0f;
         
@@ -1038,33 +1037,33 @@ static void HandleCameraLock() {
             g_state.lockedCamX = std::max(0.0f, g_state.lockedCamX - delta);
         }
     
-        if (g_state.flags.storedRotation) {
-            float v19{}; // todo: refactor
-            if (g_state.flags.unk_slippedOffCurb_x40) {
-                v19 = g_state.cameraRotOnFoot.z;
-            } else {
-                auto heading = g_state.storedRotation;
-                if (heading < 0.0f) {
-                    heading += TAU;
-                }
-                auto headingDeg = heading * RAD_TO_DEG;
-                headingDeg -= CPad::NewMouseControllerState.x * CCamera::m_fMouseAccelHorzntal * 80.0f;
-                v19 = NormalizeAngle(headingDeg);
-            }
+        // if (g_state.flags.storedRotation) {
+        //     float v19{}; // todo: refactor
+        //     if (g_state.flags.unk_slippedOffCurb_x40) {
+        //         v19 = g_state.cameraRotOnFoot.z;
+        //     } else {
+        //         auto heading = g_state.storedRotation;
+        //         if (heading < 0.0f) {
+        //             heading += TAU;
+        //         }
+        //         auto headingDeg = heading * RAD_TO_DEG;
+        //         headingDeg -= CPad::NewMouseControllerState.x * CCamera::m_fMouseAccelHorzntal * 80.0f;
+        //         v19 = NormalizeAngle(headingDeg);
+        //     }
         
-            float v20{}; // todo: refactor
-            if (v19 <= 270.0f || v19 >= 90.0f) {
-                v20 = v19 * DEG_TO_RAD;
-            } else {
-                v20 = (360.0f - v19) * -DEG_TO_RAD;
-            }
+        //     float v20{}; // todo: refactor
+        //     if (v19 <= 270.0f || v19 >= 90.0f) {
+        //         v20 = v19 * DEG_TO_RAD;
+        //     } else {
+        //         v20 = (360.0f - v19) * -DEG_TO_RAD;
+        //     }
         
-            TheCamera.m_aCams[0].m_fVerticalAngle = 0.0f;
-            TheCamera.m_aCams[0].m_fHorizontalAngle = v20 - FRAC_PI_2;
-            auto v45 = v19 * DEG_TO_RAD; // todo: refactor
-            playerPed->m_fCurrentRotation = v45;
-            g_state.storedRotation = v45;
-        }
+        //     TheCamera.m_aCams[0].m_fVerticalAngle = 0.0f;
+        //     TheCamera.m_aCams[0].m_fHorizontalAngle = v20 - FRAC_PI_2;
+        //     auto v45 = v19 * DEG_TO_RAD; // todo: refactor
+        //     playerPed->m_fCurrentRotation = v45;
+        //     g_state.storedRotation = v45;
+        // }
     }
 
     const auto headMat = GetHeadMatrix(playerPed);
@@ -1177,18 +1176,18 @@ static void sub_100032F0() {
         return;
     }
     
-    if (g_state.oldFlags.storedRotation) {
-        g_state.unkFloatForSlerp = 1.0f;
+    // if (g_state.oldFlags.storedRotation) {
+    //     g_state.unkFloatForSlerp = 1.0f;
 
-        g_state.flags.lockCamera = false;
-        g_state.flags.dontRotateWithCam = false;
-        g_state.flags.unk_x20 = false;
-        g_state.flags.unk_slippedOffCurb_x40 = false;
+    //     g_state.flags.lockCamera = false;
+    //     g_state.flags.dontRotateWithCam = false;
+    //     g_state.flags.unk_x20 = false;
+    //     g_state.flags.unk_slippedOffCurb_x40 = false;
         
-        InitFirstPersonCamera();
-        g_state.cameraMat = g_state.unkMat7;
-        return;
-    }
+    //     InitFirstPersonCamera();
+    //     g_state.cameraMat = g_state.unkMat7;
+    //     return;
+    // }
     
     g_state.flags.unk_slippedOffCurb_x40 = true;
     g_state.unkFloatForSlerp = 1.0f - g_state.unkFloatForSlerp;
@@ -1203,13 +1202,13 @@ static void UpdateTheCamera(const CMatrix& mat) {
     TheCamera.m_mCameraMatrix = mat;
     TheCamera.m_mCameraMatrix.m_right *= -1.0f;
     TheCamera.m_aCams[0].m_vecSource = mat.m_pos;
-    TheCamera.m_aCams[0].m_vecUp = mat.m_up;
-    TheCamera.m_aCams[0].m_vecFront = mat.m_forward;
+    TheCamera.m_aCams[0].m_vecUp     = mat.m_up;
+    TheCamera.m_aCams[0].m_vecFront  = mat.m_forward;
 
-    if (g_state.flags.storedRotation && g_state.flags.lockCamera) {
-        auto* playerPed = CWorld::Players[0].m_pPed;
-        playerPed->m_fCurrentRotation = g_state.storedRotation;
-    } else {
+    // if (g_state.flags.storedRotation && g_state.flags.lockCamera) {
+    //     auto* playerPed = CWorld::Players[0].m_pPed;
+    //     playerPed->m_fCurrentRotation = g_state.storedRotation;
+    // } else {
         const auto out = MatToEuler(mat);
 
         const auto horizontal = out.z > 90.0f || out.z < 270.0f
@@ -1220,7 +1219,7 @@ static void UpdateTheCamera(const CMatrix& mat) {
         TheCamera.m_aCams[0].m_fVerticalAngle = out.x < 180.0f || out.x > 360.0f
             ? out.x * DEG_TO_RAD
             : (360.0f - out.x) * -DEG_TO_RAD;
-    }
+    // }
 }
 
 // todo: const?
