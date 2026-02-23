@@ -481,21 +481,6 @@ static void Update1stPersonState() {
     }
 }
 
-// TODO: consider moving switch into this func
-// and renaming it to `UpdateOnfootFlags`?
-static auto UpdateFlagsOnfoot(const CPlayerPed* ped) -> int {
-    if (CPad::GetPad(0)->bPlayerSafe) {
-        return 1;
-    }
-
-    // Can rotate the camera, but CJ should not rotate with it
-    if (ped->m_pIntelligence->GetTaskClimb() != nullptr || ped->m_pIntelligence->GetUsingParachute()) {
-        return 2;
-    }
-
-    return 0;
-}
-
 static void UpdateFlags(const CPlayerPed* ped) {
     g_state.oldFlags = g_state.flags;
 
@@ -503,25 +488,23 @@ static void UpdateFlags(const CPlayerPed* ped) {
         if (g_state.flags.lockCamera) {
             g_state.cameraRotOnFoot.x = 0.0f; // TODO: cj rotates without this crap
         }
-    
-        const auto action = UpdateFlagsOnfoot(ped);
-        switch (action) {
-        case 0:
-            g_state.flags.isOnFoot = true;
-            if (g_state.oldFlags.isInCar && ped->m_pVehicle == nullptr) {
-                g_state.flags.isInCar = false;
-            }
-            break;
-        case 1:
+
+        if (CPad::GetPad(0)->bPlayerSafe) {
             g_state.flags.dontRotateWithCam = false;
             g_state.flags.lockCamera = true;
-            break;
-        case 2:
+            return;
+        }
+
+        // Can rotate the camera, but CJ should not rotate with it
+        if (ped->m_pIntelligence->GetTaskClimb() != nullptr || ped->m_pIntelligence->GetUsingParachute()) {
             g_state.flags.dontRotateWithCam = true;
             g_state.flags.lockCamera = true;
-            break;
-        default:
             return;
+        }
+
+        g_state.flags.isOnFoot = true;
+        if (g_state.oldFlags.isInCar && ped->m_pVehicle == nullptr) {
+            g_state.flags.isInCar = false;
         }
     } else {
         if (g_state.flags.lockCamera || g_state.flags.isOnFoot) {
