@@ -152,6 +152,7 @@ static auto GetTimeDelta() -> float {
 ///////////////////////////////////////////////////////////////////////////////
 
 // TODO - builds quat from matrix
+// TODO: CQuaternion::Set(const CMatrix&) or CQuaternion::From(const CMatrix&)
 static auto D3DXQuaternionRotationMatrix(const CMatrix& matrix) -> CQuaternion {
     CQuaternion out;
     ((CQuaternion* (__stdcall*)(CQuaternion*, const RwMatrix*))0x768E5F)(&out, reinterpret_cast<const RwMatrix*>(&matrix));
@@ -167,9 +168,7 @@ static auto D3DXQuaternionRotationMatrixRt(const CMatrix& matrix) -> RtQuat {
 static RtQuat* D3DXQuaternionSlerp(RtQuat& out, const RtQuat& from, const CQuaternion& to, float t) {
     return ((RtQuat* (__stdcall*)(RtQuat*, const RtQuat*, const CQuaternion*, float))0x7694BB)(&out, &from, &to, t);
 }
-static CQuaternion* D3DXQuaternionSlerp(CQuaternion& out, const CQuaternion& from, const CQuaternion& to, float t) {
-    return ((CQuaternion* (__stdcall*)(CQuaternion*, const CQuaternion*, const CQuaternion*, float))0x7694BB)(&out, &from, &to, t);
-}
+
 
 
 
@@ -573,7 +572,7 @@ static void UpdateCameraOnFoot(CPlayerPed* ped) {
         static constexpr auto QUAT_45_DEG_RIGHT = CQuaternion{-0.38268343f, 0.0f, 0.0f, 0.92387956f}; // xyz: -45.0, 0.0, 0.0
 
         CQuaternion quat;
-        quat.Slerp(g_state.tempLookBackQuat1, g_state.tempLookBackQuat2, g_state.lookBackProgress); // was D3DXQuaternionSlerp
+        quat.Slerp(g_state.tempLookBackQuat1, g_state.tempLookBackQuat2, g_state.lookBackProgress);
         const auto pos = g_state.unkMat4.m_pos; // todo: remove?
         g_state.unkMat4.SetRotate(quat);
         g_state.unkMat4.m_pos = pos; // todo: remove?
@@ -1107,7 +1106,7 @@ static void sub_100032F0() {
             }
 
             CQuaternion a1;
-            D3DXQuaternionSlerp(a1, start, end, g_state.unkFloatForSlerp);
+            a1.Slerp(start, end, g_state.unkFloatForSlerp);
             g_state.cameraMat.SetRotate(a1);
             g_state.cameraMat.m_pos = g_state.unkMat7.m_pos;
             return;
