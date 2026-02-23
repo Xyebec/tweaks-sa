@@ -77,13 +77,13 @@ static void CMatrix_SetRotateOnlyDeg(CMatrix& self, float degX, float degY, floa
     // self.SetRotateOnly(degX * DEG_TO_RAD, degY * DEG_TO_RAD, degZ * DEG_TO_RAD); // TODO - without useless pos copying
 }
 
-static auto CMatrix_Rotated(const CMatrix& mat, const CMatrix& rotMat) -> CMatrix {
-    CMatrix out;
-    out.m_right   = rotMat.TransformVector(mat.m_right);
-    out.m_forward = rotMat.TransformVector(mat.m_forward);
-    out.m_up      = rotMat.TransformVector(mat.m_up);
-    return out;
-}
+// static auto CMatrix_Rotated(const CMatrix& mat, const CMatrix& rotMat) -> CMatrix {
+//     CMatrix out;
+//     out.m_right   = rotMat.TransformVector(mat.m_right);
+//     out.m_forward = rotMat.TransformVector(mat.m_forward);
+//     out.m_up      = rotMat.TransformVector(mat.m_up);
+//     return out;
+// }
 
 ///////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////// Util2 ////////////////////////////////////
@@ -845,7 +845,7 @@ static void UpdateCameraInVehicle() {
         const auto zDeg = NormalizeAngle(g_state.cameraRotInCar.z);
         const auto xDeg = NormalizeAngle(g_state.cameraRotInCar.x);
         CMatrix_SetRotateOnlyDeg(cameraRot, xDeg, 0.0f, zDeg); // TODO: no point keeping pos - it's 0 by default // TODO: CMatrix::FromRotation()?
-        g_state.unkMat6 = CMatrix_Rotated(cameraRot, *vehicle->m_matrix);
+        g_state.unkMat6 = *vehicle->m_matrix * cameraRot;
         g_state.unkMat6.m_pos = headMat.m_pos;
 
         if (TheCamera.m_aCams[0].m_nMode != MODE_AIMWEAPON_FROMCAR && !HasDriveByAnimBlendAssociation(playerPed)) {
@@ -1073,7 +1073,7 @@ static void HandleCameraLock() {
     const auto headMat = GetHeadMatrix(playerPed);
     CMatrix camMat;
     CMatrix_SetRotateOnlyDeg(camMat, NormalizeAngle(g_state.lockedCamY), 0.0f, NormalizeAngle(g_state.lockedCamX));
-    g_state.unkMat7 = CMatrix_Rotated(camMat, headMat);
+    g_state.unkMat7 = headMat * camMat;
     g_state.unkMat7.m_pos = headMat.m_pos;
 }
 
@@ -1233,7 +1233,7 @@ static void UpdateHeadRotation(const CMatrix& mat) {
     const auto* neckMat = FindBoneMatrix(playerPed, BONE_UPPERTORSO);
     // Dirty, but works
     const auto v6 = reinterpret_cast<const CMatrix*>(neckMat)->Inverted();
-    auto a2 = CMatrix_Rotated(mat, v6);
+    auto a2 = v6 * mat;
     
     const auto v4 = a2.GetLeft();
     a2.m_right = a2.m_up;
