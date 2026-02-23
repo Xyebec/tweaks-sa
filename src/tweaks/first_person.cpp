@@ -499,10 +499,7 @@ static auto UpdateFlagsOnfoot(const CPlayerPed* ped) -> int {
 static void UpdateFlags(const CPlayerPed* ped) {
     g_state.oldFlags = g_state.flags;
 
-    if (ped->m_pVehicle == nullptr
-        || !ped->bInVehicle
-        || ped->m_ePedState == PEDSTATE_IDLE
-    ) {
+    if (!IsInAnyVehicle(ped)) {
         if (g_state.flags.lockCamera) {
             g_state.cameraRotOnFoot.x = 0.0f; // TODO: cj rotates without this crap
         }
