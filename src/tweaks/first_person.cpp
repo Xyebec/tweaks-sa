@@ -152,17 +152,15 @@ static auto GetTimeDelta() -> float {
 ///////////////////////////////////////////////////////////////////////////////
 
 // TODO - builds quat from matrix
-static void D3DXQuaternionRotationMatrix(CQuaternion& outQuat, const CMatrix& matrix) {
-    ((CQuaternion* (__stdcall*)(CQuaternion*, const RwMatrix*))0x768E5F)(&outQuat, reinterpret_cast<const RwMatrix*>(&matrix));
+static auto D3DXQuaternionRotationMatrix(const CMatrix& matrix) -> CQuaternion {
+    CQuaternion out;
+    ((CQuaternion* (__stdcall*)(CQuaternion*, const RwMatrix*))0x768E5F)(&out, reinterpret_cast<const RwMatrix*>(&matrix));
+    return out;
 }
-static void D3DXQuaternionRotationMatrix(RtQuat& outQuat, const CMatrix& matrix) {
-    ((RtQuat* (__stdcall*)(RtQuat*, const RwMatrix*))0x768E5F)(&outQuat, reinterpret_cast<const RwMatrix*>(&matrix));
-}
-// TODO - builds matrix from quat
-static void D3DXMatrixRotationQuaternion(CMatrix& outMat, const CQuaternion& quat) {
-    const auto pos = outMat.m_pos; // TODO: is it necessary?
-    ((RwMatrix* (__stdcall*)(RwMatrix*, const CQuaternion*))0x7681FF)(reinterpret_cast<RwMatrix*>(&outMat), &quat);
-    outMat.m_pos = pos;
+static auto D3DXQuaternionRotationMatrixRt(const CMatrix& matrix) -> RtQuat {
+    RtQuat out;
+    ((RtQuat* (__stdcall*)(RtQuat*, const RwMatrix*))0x768E5F)(&out, reinterpret_cast<const RwMatrix*>(&matrix));
+    return out;
 }
 
 // TODO - use .Slerp from CQuaternion?
@@ -576,7 +574,9 @@ static void UpdateCameraOnFoot(CPlayerPed* ped) {
 
         CQuaternion quat;
         quat.Slerp(g_state.tempLookBackQuat1, g_state.tempLookBackQuat2, g_state.lookBackProgress); // was D3DXQuaternionSlerp
-        D3DXMatrixRotationQuaternion(g_state.unkMat4, quat); // todo g_state.unkMat4.SetRotate(quat) or SetRotateOnly?
+        const auto pos = g_state.unkMat4.m_pos; // todo: remove?
+        g_state.unkMat4.SetRotate(quat);
+        g_state.unkMat4.m_pos = pos; // todo: remove?
         auto* spine = FindAnimBlendFrameData(ped, BONE_PELVIS)->KeyFrame;
         auto* spine1 = FindAnimBlendFrameData(ped, BONE_SPINE1)->KeyFrame;
         if (g_state.isLookingBackOverRightShoulder) {
@@ -600,15 +600,15 @@ static void UpdateCameraOnFoot(CPlayerPed* ped) {
             g_state.isLookingBackOverRightShoulder = NormalizeAngle(g_state.cameraRotOnFoot.z - zDeg) < 180.0f;
             CMatrix_SetRotateOnlyDeg(g_state.tempLookBackMat1, g_state.cameraRotOnFoot.x, 0.0f, g_state.cameraRotOnFoot.z);
             CMatrix_SetRotateOnlyDeg(g_state.tempLookBackMat2, 0.0f, 0.0f, zDeg);
-            D3DXQuaternionRotationMatrix(g_state.tempLookBackQuat1, g_state.tempLookBackMat1);
-            D3DXQuaternionRotationMatrix(g_state.tempLookBackQuat2, g_state.tempLookBackMat2);
+            g_state.tempLookBackQuat1 = D3DXQuaternionRotationMatrix(g_state.tempLookBackMat1);
+            g_state.tempLookBackQuat2 = D3DXQuaternionRotationMatrix(g_state.tempLookBackMat2);
             g_state.lookBackProgress = std::min(g_state.lookBackProgress + delta, 1.0f);
         } else {
             g_state.lookBackProgress += delta;
             if (g_state.lookBackProgress > 1.0f) {
                 g_state.lookBackProgress = 1.0f;
                 CMatrix_SetRotateOnlyDeg(g_state.tempLookBackMat1, 0.0f, 0.0f, g_state.cameraRotOnFoot.z);
-                D3DXQuaternionRotationMatrix(g_state.tempLookBackQuat1, g_state.tempLookBackMat1);
+                g_state.tempLookBackQuat1 = D3DXQuaternionRotationMatrix(g_state.tempLookBackMat1);
                 g_state.cameraRotOnFoot.x = 0.0f;
             }
         }
@@ -1099,16 +1099,16 @@ static void sub_100032F0() {
             CQuaternion start;
             CQuaternion end;
             if (g_state.flags.unk_x20) {
-                D3DXQuaternionRotationMatrix(start, g_state.unkMat4);
-                D3DXQuaternionRotationMatrix(end, g_state.unkMat7);
+                start = D3DXQuaternionRotationMatrix(g_state.unkMat4);
+                end = D3DXQuaternionRotationMatrix(g_state.unkMat7);
             } else if (g_state.flags.unk_slippedOffCurb_x40) {
-                D3DXQuaternionRotationMatrix(start, g_state.unkMat7);
-                D3DXQuaternionRotationMatrix(end, g_state.unkMat4);
+                start = D3DXQuaternionRotationMatrix(g_state.unkMat7);
+                end = D3DXQuaternionRotationMatrix(g_state.unkMat4);
             }
 
             CQuaternion a1;
             D3DXQuaternionSlerp(a1, start, end, g_state.unkFloatForSlerp);
-            D3DXMatrixRotationQuaternion(g_state.cameraMat, a1);
+            g_state.cameraMat.SetRotate(a1);
             g_state.cameraMat.m_pos = g_state.unkMat7.m_pos;
             return;
         }
@@ -1226,21 +1226,20 @@ static void UpdateTheCamera(const CMatrix& mat) {
     }
 }
 
-// TODO: rename vars
-static void UpdateHeadRotation(const CMatrix& mat) {
-    auto* playerPed = CWorld::Players[0].m_pPed;
-
-    const auto* neckMat = FindBoneMatrix(playerPed, BONE_UPPERTORSO);
-    // Dirty, but works
-    const auto v6 = reinterpret_cast<const CMatrix*>(neckMat)->Inverted();
-    auto a2 = v6 * mat;
+// todo: const?
+static void SetHeadRotation(CPed* ped, const CMatrix& mat) {
+    const auto* neckMat = FindBoneMatrix(ped, BONE_UPPERTORSO);
+    const auto invNeckMat = reinterpret_cast<const CMatrix*>(neckMat)->Inverted();
+    auto localRot = invNeckMat * mat;
     
-    const auto v4 = a2.GetLeft();
-    a2.m_right = a2.m_up;
-    a2.m_up = v4;
+    // Align axes TODO DESCRIPTION
+    // Rotate 90 degrees left (otherwise the head will lay on the right shoulder)
+    const auto left = localRot.GetLeft();
+    localRot.m_right = localRot.m_up;
+    localRot.m_up = left;
     
-    auto* head = FindAnimBlendFrameData(playerPed, BONE_NECK)->KeyFrame;
-    D3DXQuaternionRotationMatrix(head->orientation, a2);
+    auto* headFrame = FindAnimBlendFrameData(ped, BONE_NECK)->KeyFrame;
+    headFrame->orientation = D3DXQuaternionRotationMatrixRt(localRot);
 }
 
 
@@ -1292,7 +1291,7 @@ static void CALLCONV_FASTCALL Hook_CCam__Process(CCam* self, uintptr_t /*edx*/) 
 
     /////////////////////////
 
-    UpdateHeadRotation(g_state.cameraMat);
+    SetHeadRotation(playerPed, g_state.cameraMat);
 
     TheCamera.m_bUseNearClipScript = true;
     TheCamera.m_fNearClipScript = g_settings.nearClip;
