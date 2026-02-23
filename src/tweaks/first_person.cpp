@@ -165,8 +165,10 @@ static auto D3DXQuaternionRotationMatrixRt(const CMatrix& matrix) -> RtQuat {
 }
 
 // TODO - use .Slerp from CQuaternion?
-static RtQuat* D3DXQuaternionSlerp(RtQuat& out, const RtQuat& from, const CQuaternion& to, float t) {
-    return ((RtQuat* (__stdcall*)(RtQuat*, const RtQuat*, const CQuaternion*, float))0x7694BB)(&out, &from, &to, t);
+static auto D3DXQuaternionSlerp(const RtQuat& from, const CQuaternion& to, float t) -> RtQuat {
+    RtQuat out;
+    ((RtQuat* (__stdcall*)(RtQuat*, const RtQuat*, const CQuaternion*, float))0x7694BB)(&out, &from, &to, t);
+    return out;
 }
 
 
@@ -579,11 +581,11 @@ static void UpdateCameraOnFoot(CPlayerPed* ped) {
         auto* spine = FindAnimBlendFrameData(ped, BONE_PELVIS)->KeyFrame;
         auto* spine1 = FindAnimBlendFrameData(ped, BONE_SPINE1)->KeyFrame;
         if (g_state.isLookingBackOverRightShoulder) {
-            D3DXQuaternionSlerp(spine->orientation, spine->orientation, QUAT_45_DEG_RIGHT, g_state.lookBackProgress);
-            D3DXQuaternionSlerp(spine1->orientation, spine1->orientation, QUAT_45_DEG_RIGHT, g_state.lookBackProgress);
+            spine->orientation = D3DXQuaternionSlerp(spine->orientation, QUAT_45_DEG_RIGHT, g_state.lookBackProgress);
+            spine1->orientation = D3DXQuaternionSlerp(spine1->orientation, QUAT_45_DEG_RIGHT, g_state.lookBackProgress);
         } else {
-            D3DXQuaternionSlerp(spine->orientation, spine->orientation, QUAT_45_DEG_LEFT, g_state.lookBackProgress);
-            D3DXQuaternionSlerp(spine1->orientation, spine1->orientation, QUAT_45_DEG_LEFT, g_state.lookBackProgress);
+            spine->orientation = D3DXQuaternionSlerp(spine->orientation, QUAT_45_DEG_LEFT, g_state.lookBackProgress);
+            spine1->orientation = D3DXQuaternionSlerp(spine1->orientation, QUAT_45_DEG_LEFT, g_state.lookBackProgress);
         }
     };
 
@@ -743,7 +745,7 @@ static void BlendLookBackAnimation(std::span<const CQuaternion, 11> bones, float
     
     for (size_t i = 0; i < BONES.size(); i++) {
         auto* frame = FindAnimBlendFrameData(playerPed, BONES.at(i))->KeyFrame;
-        D3DXQuaternionSlerp(frame->orientation, frame->orientation, bones[i], t);
+        frame->orientation = D3DXQuaternionSlerp(frame->orientation, bones[i], t);
     }
 }
 
@@ -878,11 +880,7 @@ static void UpdateCameraInVehicle() {
                         static constexpr auto v90 = CQuaternion{0.11877283f, -0.19613053f, 0.67650485f, 0.6998335f};
                         auto* frame = FindAnimBlendFrameData(playerPed, BONE_ROOT)->KeyFrame;
                         frame->translation = Lerp(frame->translation, result, g_state.slerpLookBackAnimInCar);
-                        D3DXQuaternionSlerp(
-                            frame->orientation,
-                            frame->orientation,
-                            v90,
-                            g_state.slerpLookBackAnimInCar);
+                        frame->orientation = D3DXQuaternionSlerp(frame->orientation, v90, g_state.slerpLookBackAnimInCar);
                     } else {
                         g_state.slerpLookBackAnimInCar = 0.0f;
                     }
