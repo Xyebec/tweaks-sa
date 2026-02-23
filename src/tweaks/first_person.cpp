@@ -489,11 +489,12 @@ static void UpdateFlags(const CPlayerPed* ped) {
             g_state.cameraRotOnFoot.x = 0.0f; // TODO: cj rotates without this crap
         }
 
-        if (CPad::GetPad(0)->bPlayerSafe) {
-            g_state.flags.dontRotateWithCam = false;
-            g_state.flags.lockCamera = true;
-            return;
-        }
+        // TODO: Unreachable
+        // if (CPad::GetPad(0)->bPlayerSafe) {
+        //     g_state.flags.dontRotateWithCam = false;
+        //     g_state.flags.lockCamera = true;
+        //     return;
+        // }
 
         // Can rotate the camera, but CJ should not rotate with it
         if (ped->m_pIntelligence->GetTaskClimb() != nullptr || ped->m_pIntelligence->GetUsingParachute()) {
