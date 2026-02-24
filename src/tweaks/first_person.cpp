@@ -19,6 +19,7 @@
 #include "World.h"
 #include "common.h"
 #include "config.h"
+#include "eAnimations.h"
 #include "ePedBones.h"
 #include "patcher.h"
 #include "safetyhook/easy.hpp"
@@ -771,27 +772,22 @@ static constexpr CQuaternion QUATS_BIKE_LOOK_RIGHT[11] = {
 };
 
 static auto HasDriveByAnimBlendAssociation(const CPed* ped) -> bool {
-    auto* rwClump = ped->m_pRwClump;
+    static constexpr std::initializer_list<uint32_t> ANIMS = {
+        ANIM_DEFAULT_DRIVEBY_L,
+        ANIM_DEFAULT_DRIVEBY_R,
+        ANIM_DEFAULT_DRIVEBYL_L,
+        ANIM_DEFAULT_DRIVEBYL_R,
 
-    return RpAnimBlendClumpGetAssociation(rwClump, "DrivebyL_L") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "DrivebyL_R") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Driveby_L") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Driveby_R") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Biked_DrivebyLHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Biked_DrivebyRHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikeh_DrivebyLHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikeh_DrivebyRHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikes_DrivebyLHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikes_DrivebyRHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikev_DrivebyLHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikev_DrivebyRHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "BMX_Driveby_LHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "BMX_Driveby_RHS") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Biked_DrivebyFT") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikeh_DrivebyFT") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikes_DrivebyFT") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "Bikev_DrivebyFT") != nullptr
-        || RpAnimBlendClumpGetAssociation(rwClump, "BMX_DrivebyFT") != nullptr;
+        // Works for groups:
+        // BIKES, BIKEV, BIKEH, BIKED, WAYFARER, BMX, MTB, CHOPPA, QUAD
+        ANIM_BIKED_BIKED_DRIVEBYLHS,
+        ANIM_BIKED_BIKED_DRIVEBYRHS,
+        ANIM_BIKED_BIKED_DRIVEBYFT,
+    };
+
+    return std::ranges::any_of(ANIMS, [&](uint32_t anim) {
+        return RpAnimBlendClumpGetAssociation(ped->m_pRwClump, anim) != nullptr;
+    });
 }
 
 static void UpdateCameraInVehicle() {
