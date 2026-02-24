@@ -1,6 +1,8 @@
 
+#include "AnimBlendAssociation.h"
 #include "AnimBlendClumpData.h"
 #include "AnimBlendFrameData.h"
+#include "AnimManager.h"
 #include "Camera.h"
 #include "CutsceneMgr.h"
 #include "Draw.h"
@@ -16,6 +18,7 @@
 #include "Timer.h"
 #include "Vector.h"
 #include "Vehicle.h"
+#include "WeaponInfo.h"
 #include "World.h"
 #include "common.h"
 #include "config.h"
@@ -1259,6 +1262,136 @@ static bool CALLCONV_FASTCALL Hook_CEntity__GetIsOnScreen(CEntity* self) {
     return Orig_CEntity__GetIsOnScreen.unsafe_thiscall<bool>(self);
 }
 
+static safetyhook::InlineHook Orig_CLoadMonitor__BeginFrame;
+static void CALLCONV_FASTCALL Hook_CLoadMonitor__BeginFrame(class CLoadMonitor* self, uintptr_t /*edx*/) {
+    Orig_CLoadMonitor__BeginFrame.thiscall(self);
+
+    constexpr auto ResetBlends = [](RpClump* rwClump, std::span<const edefaultAnimGroup> anims) {
+        for (const auto animId : anims) {
+            if (auto* assoc = RpAnimBlendClumpGetAssociation(rwClump, animId)) {
+                assoc->m_fBlendAmount = 0.0f;
+            }
+        }
+    };
+
+    static bool s_resetGunMoveBlends = false;
+    static bool s_resetAllBlends = false;
+
+    auto* playerPed = CWorld::Players[0].m_pPed;
+    auto* pad = CPad::GetPad(0);
+
+    if (!g_state.isFirstPersonOn || g_state.flags.lockCamera || g_state.flags.isInCar) {
+        if (s_resetAllBlends) {
+            static constexpr auto ANIMS = {
+                ANIM_DEFAULT_GUNMOVE_L,
+                ANIM_DEFAULT_GUNMOVE_R,
+                ANIM_DEFAULT_GUNMOVE_BWD,
+                ANIM_DEFAULT_FIGHTSH_LEFT,
+                ANIM_DEFAULT_FIGHTSH_RIGHT,
+                ANIM_DEFAULT_FIGHTSH_BWD,
+            };
+            ResetBlends(playerPed->m_pRwClump, ANIMS);
+
+            s_resetAllBlends = false;
+        }
+        return;
+    }
+
+    if (s_resetGunMoveBlends) {
+        static constexpr auto ANIMS = {
+            ANIM_DEFAULT_GUNMOVE_L,
+            ANIM_DEFAULT_GUNMOVE_R,
+            ANIM_DEFAULT_GUNMOVE_BWD,
+        };
+        ResetBlends(playerPed->m_pRwClump, ANIMS);
+    }
+
+    edefaultAnimGroup animId{};
+    const auto* taskUseGun = playerPed->m_pIntelligence->GetTaskUseGun();
+    if (taskUseGun != nullptr) {
+        const auto weaponSkill = playerPed->GetWeaponSkill();
+        const auto& currentWeapon = playerPed->m_aWeapons[playerPed->m_nSelectedWepSlot]; // NOLINT
+        const auto* weaponInfo = CWeaponInfo::GetWeaponInfo(currentWeapon.m_eWeaponType, weaponSkill);
+
+        if (!weaponInfo->m_nFlags.bAimWithArm) {
+            return;
+        }
+
+        animId = ANIM_DEFAULT_GUNMOVE_L;
+        s_resetGunMoveBlends = true;
+    } else {
+        animId = ANIM_DEFAULT_FIGHTSH_LEFT;
+        s_resetGunMoveBlends = false;
+    }
+
+    auto moveY = [&] {
+        if (pad->NewState.LeftStickY < 0) {
+            return 1.0f; // Forward
+        } else if (pad->NewState.LeftStickY > 0) {
+            return -1.0f; // Backward
+        } else {
+            return 0.0f;
+        }
+    }();
+    
+    auto moveX = [&] {
+        if (pad->NewState.LeftStickX == 0 || moveY >= 0.0f) {
+            return 0.0f;
+        } else if (pad->NewState.LeftStickX < 0) {
+            return -1.0f; // S + A
+        } else {
+            return 1.0f; // S + D
+        }
+    }();
+    
+    const auto magnitude = std::sqrt(moveX * moveX + moveY * moveY);
+    if (magnitude > 0.0f) {
+        const auto recip = 1.0f / magnitude;
+        moveX *= recip;
+        moveY *= recip;
+    }
+
+    if (moveY < 0.0f) {
+        pad->NewState.LeftStickY = 0;
+        if (moveX != 0.0f) {
+            pad->NewState.LeftStickX = 0;
+        }
+    }
+
+    auto* animL   = RpAnimBlendClumpGetAssociation(playerPed->m_pRwClump, animId);     // GUNMOVE_L   or FIGHTSH_LEFT
+    auto* animBwd = RpAnimBlendClumpGetAssociation(playerPed->m_pRwClump, animId + 1); // GUNMOVE_BWD or FIGHTSH_BWD
+    auto* animR   = RpAnimBlendClumpGetAssociation(playerPed->m_pRwClump, animId + 2); // GUNMOVE_R   or FIGHTSH_RIGHT
+    if (animL   != nullptr) { animL->m_fBlendAmount   = 0.0f; }
+    if (animR   != nullptr) { animR->m_fBlendAmount   = 0.0f; }
+    if (animBwd != nullptr) { animBwd->m_fBlendAmount = 0.0f; }
+
+    if (moveX > 0.0f) {
+        if (animR == nullptr) {
+            animR = CAnimManager::AddAnimation(playerPed->m_pRwClump, ANIM_GROUP_DEFAULT, animId + 2); // GUNMOVE_R or FIGHTSH_RIGHT
+        }
+        animR->m_fBlendAmount = moveX;
+        s_resetAllBlends = true;
+    } else if (moveX < 0.0f) {
+        if (animL == nullptr) {
+            animL = CAnimManager::AddAnimation(playerPed->m_pRwClump, ANIM_GROUP_DEFAULT, animId); // GUNMOVE_L or FIGHTSH_LEFT
+        }
+        animL->m_fBlendAmount = -moveX;
+        s_resetAllBlends = true;
+    }
+    
+    if (moveY >= 0.0f) {
+        return;
+    }
+
+    if (animBwd == nullptr) {
+        animBwd = CAnimManager::AddAnimation(playerPed->m_pRwClump, ANIM_GROUP_DEFAULT, animId + 1); // GUNMOVE_BWD or FIGHTSH_BWD
+    }
+    animBwd->m_fBlendAmount = -moveY;
+    s_resetAllBlends = true;
+
+    SetPedHeading(playerPed, g_state.unkVec3.z);
+}
+
 
 
 
@@ -1308,6 +1441,8 @@ extern void Apply() {
     patch::call(0x555854, Hook_CMirrors__BeforeConstructRenderList);
     // TODO
     Orig_CPed__PreRenderAfterTest = safetyhook::create_inline(0x5E65A0, Hook_CPed__PreRenderAfterTest);
+    // Walking backwards
+    Orig_CLoadMonitor__BeginFrame = safetyhook::create_inline(0x53D030, Hook_CLoadMonitor__BeginFrame);
 }
 
 }
