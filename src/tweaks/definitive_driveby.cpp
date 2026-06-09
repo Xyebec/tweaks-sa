@@ -4,7 +4,7 @@
 #include "config.h"
 #include "safetyhook/context.hpp"
 #include "safetyhook/easy.hpp"
-#include "util.h"
+#include "utils.h"
 
 static struct DefinitiveDriveBy {
     bool enabled;
@@ -28,13 +28,13 @@ static void Hook_DefinitiveDriveBy(safetyhook::Context& ctx) {
         return;
     }
 
-    const auto angle = NormalizeAngle(vehicle->GetHeading() - TheCamera.GetHeading());
+    const auto angle = NormalizeAngle<-PI, PI>(vehicle->GetHeading() - TheCamera.GetHeading());
 
-    const auto minL = ToRadians(-90.0f) - settings.angle_back;
-    const auto maxL = ToRadians(-90.0f) + settings.angle_front;
+    const auto minL = -90.0_deg - settings.angle_back;
+    const auto maxL = -90.0_deg + settings.angle_front;
 
-    const auto minR = ToRadians(90.0f) - settings.angle_front;
-    const auto maxR = ToRadians(90.0f) + settings.angle_back;
+    const auto minR = 90.0_deg - settings.angle_front;
+    const auto maxR = 90.0_deg + settings.angle_back;
 
     if (angle >= minL && angle <= maxL) {
         *reinterpret_cast<bool*>(ctx.esp + 0x34 - 0x1C) = true; // Left

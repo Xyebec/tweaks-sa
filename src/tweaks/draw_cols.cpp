@@ -42,14 +42,14 @@ public:
         };
 
         const RwIm3DVertex vertices[] = {
-            { .objVertex = matrix * min, .color = color },
-            { .objVertex = matrix * CVector{min.x, min.y, max.z}, .color = color },
-            { .objVertex = matrix * CVector{max.x, min.y, min.z}, .color = color },
-            { .objVertex = matrix * CVector{min.x, max.y, min.z}, .color = color },
-            { .objVertex = matrix * CVector{min.x, max.y, max.z}, .color = color },
-            { .objVertex = matrix * CVector{max.x, min.y, max.z}, .color = color },
-            { .objVertex = matrix * CVector{max.x, max.y, min.z}, .color = color },
-            { .objVertex = matrix * max, .color = color },
+            { .objVertex = matrix.TransformPoint(min), .color = color },
+            { .objVertex = matrix.TransformPoint({min.x, min.y, max.z}), .color = color },
+            { .objVertex = matrix.TransformPoint({max.x, min.y, min.z}), .color = color },
+            { .objVertex = matrix.TransformPoint({min.x, max.y, min.z}), .color = color },
+            { .objVertex = matrix.TransformPoint({min.x, max.y, max.z}), .color = color },
+            { .objVertex = matrix.TransformPoint({max.x, min.y, max.z}), .color = color },
+            { .objVertex = matrix.TransformPoint({max.x, max.y, min.z}), .color = color },
+            { .objVertex = matrix.TransformPoint(max), .color = color },
         };
 
         AddPrimitive(indices, vertices);
@@ -61,16 +61,16 @@ public:
         };
 
         const RwIm3DVertex vertices[] = {
-            { .objVertex = matrix * a, .color = color },
-            { .objVertex = matrix * b, .color = color },
-            { .objVertex = matrix * c, .color = color },
+            { .objVertex = matrix.TransformPoint(a), .color = color },
+            { .objVertex = matrix.TransformPoint(b), .color = color },
+            { .objVertex = matrix.TransformPoint(c), .color = color },
         };
 
         AddPrimitive(indices, vertices);
     }
 
     void AddSphere(const CMatrix& matrix, const CVector& sphereCenter, float radius, RwUInt32 color) {
-        const auto center = matrix * sphereCenter;
+        const auto center = matrix.TransformPoint(sphereCenter);
 
         static constexpr RwImVertexIndex indices[] = {
             5, 0,    0, 4,    4, 1,    1, 5,
@@ -95,8 +95,8 @@ public:
         };
 
         const RwIm3DVertex vertices[] = {
-            { .objVertex = matrix * start, .color = color },
-            { .objVertex = matrix * end,   .color = color },
+            { .objVertex = matrix.TransformPoint(start), .color = color },
+            { .objVertex = matrix.TransformPoint(end),   .color = color },
         };
 
         AddPrimitive(indices, vertices);
