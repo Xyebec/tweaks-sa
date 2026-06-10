@@ -377,10 +377,16 @@ struct FirstPersonFlags {
     bool limitCamAngle : 1;
 };
 
+enum class FirstPersonMode : uint8_t {
+    Disabled,
+    Enabled,
+    TemporarilyDisabled,
+};
+
 class FirstPersonState {
 public:
     auto IsEnabled() const -> bool {
-        return m_isFirstPersonOn;
+        return m_mode == FirstPersonMode::Enabled;
     }
 
     auto GetCameraMat() -> CMatrix& {
@@ -412,7 +418,7 @@ public:
         };
 
         const auto Enable1stPerson = [this](const CPed* ped) {
-            m_isFirstPersonOn = true;
+            m_mode = FirstPersonMode::Enabled;
             Toggle1stPersonPatches(true);
             
             m_lookBack.progress = 0.0f;
@@ -421,7 +427,7 @@ public:
         };
 
         const auto Disable1stPerson = [this]() {
-            m_isFirstPersonOn = false;
+            m_mode = FirstPersonMode::Disabled;
             Toggle1stPersonPatches(false);
 
             TheCamera.m_aCams[0].m_fFOV = 70.0f; // 70.0f on foot by default
@@ -437,22 +443,20 @@ public:
             || ped->m_ePedState == PEDSTATE_DIE
             || ped->m_ePedState == PEDSTATE_DEAD
         ) {
-            if (m_isFirstPersonOn) {
-                m_enableFirstPersonLater = true;
+            if (m_mode == FirstPersonMode::Enabled) {
                 Disable1stPerson();
+                m_mode = FirstPersonMode::TemporarilyDisabled;
             }
             return;
         }
         
-        if (m_enableFirstPersonLater) {
-            m_enableFirstPersonLater = false;
-            
+        if (m_mode == FirstPersonMode::TemporarilyDisabled) {
             Enable1stPerson(ped);
             m_cameraRot = CVector{ 0.0f, 0.0f, (m_flags.isOnFoot ? GetHeading(*ped->m_matrix) : 0.0f) };
         }
 
         // todo: refactor
-        if (m_isFirstPersonOn) {
+        if (m_mode == FirstPersonMode::Enabled) {
             if (IsInAnyVehicle(ped)) {
                 if (TheCamera.m_nCarZoom == 0 && m_storedCarZoom == 1) {
                     m_storedPedZoom = 5;
@@ -523,7 +527,7 @@ public:
             }
         };
 
-        if (!m_isFirstPersonOn
+        if (m_mode != FirstPersonMode::Enabled
             || m_flags.limitCamAngle
             || !m_flags.isOnFoot
             || ped->bIsInTheAir
@@ -951,8 +955,7 @@ private:
     }
 
 public:
-    bool m_isFirstPersonOn{};
-    bool m_enableFirstPersonLater{};
+    FirstPersonMode m_mode{FirstPersonMode::Disabled};
     uint8_t m_storedPedZoom{};
     uint8_t m_storedCarZoom{};
 
