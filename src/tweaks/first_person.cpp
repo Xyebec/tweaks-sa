@@ -358,7 +358,10 @@ struct Settings {
     float fov{100.0f};
     float sensitivity{1.0f};
     bool look_towards_drive_by{true};
-    bool center_camera_in_car{true};
+    struct CenterCamera {
+        bool  enabled{true};
+        float delay_secs{1.0f};
+    } center_camera;
 
     auto GetVehicleOffset(uint32_t modelId) const -> const CVector& {
         const auto index = modelId - 400;
@@ -923,7 +926,7 @@ private:
     }
 
     auto HandleCameraCenteringInCar(const CCam& cam, const CVehicle* vehicle, const CVector2D& mouseDelta, float deltaTime) -> bool {
-        if (!g_settings.center_camera_in_car) {
+        if (!g_settings.center_camera.enabled) {
             return false;
         }
         
@@ -932,12 +935,10 @@ private:
         }
 
         if (!mouseDelta.IsZero()) {
-            m_cameraCenteringTimer = 50.0f;
+            m_cameraCenteringTimer = g_settings.center_camera.delay_secs * 50.0f;
         }
 
-        if (m_cameraCenteringTimer > 0.0f) {
-            m_cameraCenteringTimer = std::max(0.0f, m_cameraCenteringTimer - CTimer::ms_fTimeStep);
-        }
+        m_cameraCenteringTimer = std::max(0.0f, m_cameraCenteringTimer - CTimer::ms_fTimeStep);
 
         const auto isAircraft = vehicle->m_nVehicleSubClass == VEHICLE_HELI || vehicle->m_nVehicleSubClass == VEHICLE_PLANE;
         const auto isMouseSteering = isAircraft ? CVehicle::m_bEnableMouseFlying : CVehicle::m_bEnableMouseSteering;
