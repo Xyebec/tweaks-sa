@@ -48,6 +48,6 @@ auto Config::ParseFile(const std::filesystem::path& path) -> std::expected<Confi
     return Config{std::move(toml)};
 }
 
-Config::Config(toml::table&& table)
+Config::Config(toml::table&& table) noexcept
     : m_root{std::move(table)}
 {}
