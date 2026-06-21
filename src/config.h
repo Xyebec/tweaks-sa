@@ -120,7 +120,7 @@ private:
     static consteval auto ToKebabCase() {
         static constexpr auto IsUpper = [](char ch) { return ch >= 'A' && ch <= 'Z'; };
         static constexpr auto IsLower = [](char ch) { return ch >= 'a' && ch <= 'z'; };
-        static constexpr auto ToLower = [](char ch) { return IsLower(ch) ? ch : static_cast<char>(ch + ('a' - 'A')); };
+        static constexpr auto ToLower = [](char ch) { return IsUpper(ch) ? static_cast<char>(ch + ('a' - 'A')) : ch; };
 
         static_assert(!str.empty(), "str is empty");
 
