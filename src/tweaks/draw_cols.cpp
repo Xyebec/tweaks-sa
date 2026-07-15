@@ -8,6 +8,7 @@
 #include "Matrix.h"
 #include "ModelInfo.h"
 #include "Renderer.h"
+#include "VisibilityPlugins.h"
 #include "config.h"
 #include "rwcore.h"
 #include "rwplcore.h"
@@ -134,41 +135,78 @@ static struct DrawCols {
     RwUInt32 color_line;
     RwUInt32 color_box;
     RwUInt32 color_triangle;
+    bool draw_bound_boxes;
+    bool draw_bound_spheres;
+    bool draw_spheres;
+    bool draw_lines;
+    bool draw_boxes;
+    bool draw_triangles;
 } settings;
 
-static void CCollision__DrawColModel(const CMatrix& matrix, const CColModel& colModel) {
-    const auto& boundBox = colModel.m_boundBox;
-    s_renderer.AddCube(matrix, boundBox.m_vecMin, boundBox.m_vecMax, settings.color_bound_box);
+static void DrawColModel(const CMatrix& matrix, const CColModel& colModel) {
+    if (settings.draw_bound_boxes) {
+        const auto& boundBox = colModel.m_boundBox;
+        s_renderer.AddCube(matrix, boundBox.m_vecMin, boundBox.m_vecMax, settings.color_bound_box);
+    }
 
-    const auto& boundSphere = colModel.m_boundSphere;
-    s_renderer.AddSphere(matrix, boundSphere.m_vecCenter, boundSphere.m_fRadius, settings.color_bound_sphere);
+    if (settings.draw_bound_spheres) {
+        const auto& boundSphere = colModel.m_boundSphere;
+        s_renderer.AddSphere(matrix, boundSphere.m_vecCenter, boundSphere.m_fRadius, settings.color_bound_sphere);
+    }
 
     auto* colData = colModel.m_pColData;
     if (colData == nullptr) {
         return;
     }
 
-    for (const auto& sphere : std::span{colData->m_pSpheres, colData->m_nNumSpheres}) {
-        s_renderer.AddSphere(matrix, sphere.m_vecCenter, sphere.m_fRadius, settings.color_sphere);
+    if (settings.draw_spheres) {
+        for (const auto& sphere : std::span{colData->m_pSpheres, colData->m_nNumSpheres}) {
+            s_renderer.AddSphere(matrix, sphere.m_vecCenter, sphere.m_fRadius, settings.color_sphere);
+        }
     }
 
-    for (const auto& line : std::span{colData->m_pLines, colData->m_nNumLines}) {
-        s_renderer.AddLine(matrix, line.m_vecStart, line.m_vecEnd, settings.color_line);
+    if (settings.draw_lines) {
+        for (const auto& line : std::span{colData->m_pLines, colData->m_nNumLines}) {
+            s_renderer.AddLine(matrix, line.m_vecStart, line.m_vecEnd, settings.color_line);
+        }
     }
     
-    for (const auto& box : std::span{colData->m_pBoxes, colData->m_nNumBoxes}) {
-        s_renderer.AddCube(matrix, box.m_vecMin, box.m_vecMax, settings.color_box);
+    if (settings.draw_boxes) {
+        for (const auto& box : std::span{colData->m_pBoxes, colData->m_nNumBoxes}) {
+            s_renderer.AddCube(matrix, box.m_vecMin, box.m_vecMax, settings.color_box);
+        }
     }
 
-    for (const auto& triangle : std::span{colData->m_pTriangles, colData->m_nNumTriangles}) {
-        CVector v1; colData->GetTrianglePoint(v1, triangle.m_nVertA);
-        CVector v2; colData->GetTrianglePoint(v2, triangle.m_nVertB);
-        CVector v3; colData->GetTrianglePoint(v3, triangle.m_nVertC);
-        s_renderer.AddTriangle(matrix, v1, v2, v3, settings.color_triangle);
+    if (settings.draw_triangles) {
+        for (const auto& triangle : std::span{colData->m_pTriangles, colData->m_nNumTriangles}) {
+            CVector v1; colData->GetTrianglePoint(v1, triangle.m_nVertA);
+            CVector v2; colData->GetTrianglePoint(v2, triangle.m_nVertB);
+            CVector v3; colData->GetTrianglePoint(v3, triangle.m_nVertC);
+            s_renderer.AddTriangle(matrix, v1, v2, v3, settings.color_triangle);
+        }
     }
 }
 
-static void CRenderer__RenderCollisionLines() {
+static void DrawEntity(CEntity* entity) {
+    const auto* matrix = entity->GetMatrix();
+    if (matrix == nullptr) {
+        return;
+    }
+
+    const auto index = entity->m_nModelIndex;
+    if (CModelInfo::ms_modelInfoPtrs[index] == nullptr) {
+        return;
+    }
+
+    const auto* colModel = CModelInfo::ms_modelInfoPtrs[index]->m_pColModel;
+    if (colModel == nullptr) {
+        return;
+    }
+
+    DrawColModel(*matrix, *colModel);
+};
+
+static void RenderCollisionLines() {
     static constexpr auto SetRenderState = [](RwRenderState state, auto value) {
         return RwRenderStateSet(state, reinterpret_cast<void*>(value));
     };
@@ -180,22 +218,16 @@ static void CRenderer__RenderCollisionLines() {
     SetRenderState(rwRENDERSTATETEXTURERASTER, NULL);
     
     for (auto* entity : std::span{CRenderer::ms_aVisibleEntityPtrs, CRenderer::ms_nNoOfVisibleEntities}) {
-        const auto* matrix = entity->GetMatrix();
-        if (matrix == nullptr) {
-            continue;
-        }
+        DrawEntity(entity);
+    }
 
-        const auto index = entity->m_nModelIndex;
-        if (CModelInfo::ms_modelInfoPtrs[index] == nullptr) {
-            continue;
-        }
-
-        const auto* colModel = CModelInfo::ms_modelInfoPtrs[index]->m_pColModel;
-        if (colModel == nullptr) {
-            continue;
-        }
-
-        CCollision__DrawColModel(*matrix, *colModel);
+    for (
+        auto* link = CVisibilityPlugins::m_alphaEntityList.usedListTail.prev;
+        link != &CVisibilityPlugins::m_alphaEntityList.usedListHead;
+        link = link->prev
+    ) {
+        auto* entity = static_cast<CEntity*>(link->data.pObj);
+        DrawEntity(entity);
     }
 
     s_renderer.RenderAndFlush();
@@ -226,7 +258,7 @@ static void Hook_CRenderer__RenderFirstPersonVehicle() {
     }
 
     if (s_showCollision) {
-        CRenderer__RenderCollisionLines();
+        RenderCollisionLines();
     }
 }
 
