@@ -23,13 +23,16 @@ public:
         std::span<const RwImVertexIndex> indices,
         std::span<const RwIm3DVertex> vertices
     ) {
-        if (m_vertices.size() + indices.size() > std::numeric_limits<RwImVertexIndex>::max()) {
+        if (m_vertices.size() + vertices.size() > std::numeric_limits<RwImVertexIndex>::max()) {
             RenderAndFlush();
         }
 
         const auto offset = static_cast<RwImVertexIndex>(m_vertices.size());
-        for (const auto index : indices) {
-            m_indices.emplace_back(offset + index);
+
+        const auto prevSize = m_indices.size();
+        m_indices.resize(prevSize + indices.size());
+        for (size_t i = 0; i < indices.size(); i++) {
+            m_indices[prevSize + i] = offset + indices[i];
         }
 
         m_vertices.insert(m_vertices.end(), vertices.begin(), vertices.end());
@@ -104,6 +107,10 @@ public:
     }
 
     void RenderAndFlush() {
+        if (m_vertices.empty()) {
+            return;
+        }
+
         if (RwIm3DTransform(m_vertices.data(), m_vertices.size(), nullptr, 0) != nullptr) {
             RwIm3DRenderIndexedPrimitive(rwPRIMTYPELINELIST, m_indices.data(), static_cast<RwInt32>(m_indices.size()));
             RwIm3DEnd();
@@ -111,6 +118,11 @@ public:
         
         m_vertices.clear();
         m_indices.clear();
+    }
+
+    void ReserveBuffers(size_t numVertices, size_t numIndices) {
+        m_vertices.reserve(numVertices);
+        m_indices.reserve(numIndices);
     }
 
     void ResetBuffers() {
@@ -251,6 +263,8 @@ static void Hook_CRenderer__RenderFirstPersonVehicle() {
             s_showCollision = !s_showCollision;
             if (!s_showCollision) {
                 s_renderer.ResetBuffers();
+            } else {
+                s_renderer.ReserveBuffers(80000, 140000); // 2.75MiB for vertices, 274KiB for indices
             }
         }
     } else {
