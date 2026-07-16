@@ -138,7 +138,13 @@ private:
 static ImmRenderer s_renderer;
 
 static struct DrawCols {
-    bool     enabled;
+    bool enabled;
+    bool draw_bound_boxes;
+    bool draw_bound_spheres;
+    bool draw_spheres;
+    bool draw_lines;
+    bool draw_boxes;
+    bool draw_triangles;
     uint32_t hotkey;
     // A R G B colors
     RwUInt32 color_bound_box;
@@ -147,12 +153,6 @@ static struct DrawCols {
     RwUInt32 color_line;
     RwUInt32 color_box;
     RwUInt32 color_triangle;
-    bool draw_bound_boxes;
-    bool draw_bound_spheres;
-    bool draw_spheres;
-    bool draw_lines;
-    bool draw_boxes;
-    bool draw_triangles;
 } settings;
 
 static void DrawColModel(const CMatrix& matrix, const CColModel& colModel) {
