@@ -4,6 +4,7 @@
 #include "ColSphere.h"
 #include "ColTriangle.h"
 #include "CollisionData.h"
+#include "CompressedVector.h"
 #include "Entity.h"
 #include "Matrix.h"
 #include "ModelInfo.h"
@@ -137,6 +138,12 @@ private:
 
 static ImmRenderer s_renderer;
 
+enum class DrawColsMode {
+    Disabled,
+    WorldAndWireframes,
+    WireframesOnly,
+};
+
 static struct DrawCols {
     bool enabled;
     bool draw_bound_boxes;
@@ -145,6 +152,7 @@ static struct DrawCols {
     bool draw_lines;
     bool draw_boxes;
     bool draw_triangles;
+    bool draw_shadow_triangles;
     uint32_t hotkey;
     // A R G B colors
     RwUInt32 color_bound_box;
@@ -153,6 +161,7 @@ static struct DrawCols {
     RwUInt32 color_line;
     RwUInt32 color_box;
     RwUInt32 color_triangle;
+    RwUInt32 color_shadow_triangle;
 } settings;
 
 static void DrawColModel(const CMatrix& matrix, const CColModel& colModel) {
@@ -191,10 +200,21 @@ static void DrawColModel(const CMatrix& matrix, const CColModel& colModel) {
 
     if (settings.draw_triangles) {
         for (const auto& triangle : std::span{colData->m_pTriangles, colData->m_nNumTriangles}) {
-            CVector v1; colData->GetTrianglePoint(v1, triangle.m_nVertA);
-            CVector v2; colData->GetTrianglePoint(v2, triangle.m_nVertB);
-            CVector v3; colData->GetTrianglePoint(v3, triangle.m_nVertC);
+            // `CCollisionData::GetTrianglePoint` calls inlined
+            const auto v1 = UncompressVector(colData->m_pVertices[triangle.m_nVertA]);
+            const auto v2 = UncompressVector(colData->m_pVertices[triangle.m_nVertB]);
+            const auto v3 = UncompressVector(colData->m_pVertices[triangle.m_nVertC]);
             s_renderer.AddTriangle(matrix, v1, v2, v3, settings.color_triangle);
+        }
+    }
+
+    if (settings.draw_shadow_triangles && colData->m_pShadowTriangles != nullptr) {
+        for (const auto& triangle : std::span{colData->m_pShadowTriangles, colData->m_nNumShadowTriangles}) {
+            // `CCollisionData::GetShadTrianglePoint` calls inlined
+            const auto v1 = UncompressVector(colData->m_pShadowVertices[triangle.m_nVertA]);
+            const auto v2 = UncompressVector(colData->m_pShadowVertices[triangle.m_nVertB]);
+            const auto v3 = UncompressVector(colData->m_pShadowVertices[triangle.m_nVertC]);
+            s_renderer.AddTriangle(matrix, v1, v2, v3, settings.color_shadow_triangle);
         }
     }
 }
@@ -219,16 +239,8 @@ static void DrawEntity(CEntity* entity) {
 };
 
 static void RenderCollisionLines() {
-    static constexpr auto SetRenderState = [](RwRenderState state, auto value) {
-        return RwRenderStateSet(state, reinterpret_cast<void*>(value));
-    };
+    RwRenderStateSet(rwRENDERSTATETEXTURERASTER, nullptr);
 
-    //SetRenderState(rwRENDERSTATEZWRITEENABLE, true);
-    //SetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, true);
-    //SetRenderState(rwRENDERSTATESRCBLEND, rwBLENDSRCALPHA);
-    //SetRenderState(rwRENDERSTATEDESTBLEND, rwBLENDINVSRCALPHA);
-    SetRenderState(rwRENDERSTATETEXTURERASTER, NULL);
-    
     for (auto* entity : std::span{CRenderer::ms_aVisibleEntityPtrs, CRenderer::ms_nNoOfVisibleEntities}) {
         DrawEntity(entity);
     }
@@ -243,35 +255,39 @@ static void RenderCollisionLines() {
     }
 
     s_renderer.RenderAndFlush();
-
-    //SetRenderState(rwRENDERSTATESRCBLEND, 5);
-    //SetRenderState(rwRENDERSTATEDESTBLEND, 6);
-    //SetRenderState(rwRENDERSTATEVERTEXALPHAENABLE, false);
-    //SetRenderState(rwRENDERSTATEZWRITEENABLE, true);
-    //SetRenderState(rwRENDERSTATEZTESTENABLE, true);
 }
 
-static safetyhook::InlineHook orig_CRenderer__RenderFirstPersonVehicle;
-static void Hook_CRenderer__RenderFirstPersonVehicle() {
-    orig_CRenderer__RenderFirstPersonVehicle.unsafe_ccall();
-
-    static bool s_showCollision = false;
-    static bool keystate = false;
+static safetyhook::InlineHook Orig_RenderScene;
+static void Hook_RenderScene() {
+    static auto s_mode = DrawColsMode::Disabled;
+    static auto s_keystate = false;
     if ((GetAsyncKeyState(static_cast<int>(settings.hotkey)) & 0x8000) != 0) {
-        if (!keystate) {
-            keystate = true;
-            s_showCollision = !s_showCollision;
-            if (!s_showCollision) {
-                s_renderer.ResetBuffers();
-            } else {
-                s_renderer.ReserveBuffers(80000, 140000); // 2.75MiB for vertices, 274KiB for indices
+        if (!s_keystate) {
+            s_keystate = true;
+            
+            switch (s_mode) {
+                case DrawColsMode::Disabled:
+                    s_renderer.ReserveBuffers(80000, 160000); // 2.75MiB for vertices, 312KiB for indices
+                    s_mode = DrawColsMode::WorldAndWireframes;
+                    break;
+                case DrawColsMode::WorldAndWireframes:
+                    s_mode = DrawColsMode::WireframesOnly;
+                    break;
+                case DrawColsMode::WireframesOnly:
+                    s_mode = DrawColsMode::Disabled;
+                    s_renderer.ResetBuffers();
+                    break;
             }
         }
     } else {
-        keystate = false;
+        s_keystate = false;
     }
 
-    if (s_showCollision) {
+    if (s_mode != DrawColsMode::WireframesOnly) {
+        Orig_RenderScene.unsafe_ccall();
+    }
+
+    if (s_mode != DrawColsMode::Disabled) {
         RenderCollisionLines();
     }
 }
@@ -287,8 +303,7 @@ extern void Apply() {
         return;
     }
     
-    orig_CRenderer__RenderFirstPersonVehicle
-        = safetyhook::create_inline(0x53E222, Hook_CRenderer__RenderFirstPersonVehicle);
+    Orig_RenderScene = safetyhook::create_inline(0x53DF40, Hook_RenderScene);
 }
 
 }
