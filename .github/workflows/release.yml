@@ -1,0 +1,74 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Tag name for the release (e.g., v1.0.0)
+        required: true
+        type: string
+  push:
+    branches: [main]
+    tags: [v*]
+    paths-ignore:
+      - README.md
+      - .*
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    env:
+      RELEASE_TAG: ${{ inputs.tag_name || (github.ref_name == 'main' && 'dev' || github.ref_name) }}
+      ARCHIVE_NAME: ${{ github.event.repository.name }}-${{ inputs.tag_name || (github.ref_name == 'main' && 'dev' || github.ref_name) }}.zip
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+
+    - name: Set up MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW32
+        update: true
+        cache: true
+        install: >-
+          mingw-w64-i686-gcc
+          mingw-w64-i686-cmake
+          mingw-w64-i686-ninja
+          zip
+
+    - name: Cache build dir
+      id: cache-build
+      uses: actions/cache@v6
+      with:
+        path: build
+        key: ${{ github.ref_name }}-${{ hashFiles('CMakeLists.txt') }}
+        restore-keys: ${{ github.ref_name }}-
+
+    - name: Configure CMake
+      shell: msys2 {0}
+      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build project
+      shell: msys2 {0}
+      run: cmake --build build --config Release
+
+    - name: Archive build artifacts
+      shell: msys2 {0}
+      run: |
+        cd build
+        find . -type f \( -name "*.asi" -o -name "*.toml" \) | zip -@ ../${{ env.ARCHIVE_NAME }}
+
+    - name: Release
+      uses: softprops/action-gh-release@v3
+      with:
+        tag_name: ${{ env.RELEASE_TAG }}
+        prerelease: ${{ env.RELEASE_TAG == 'dev' }}
+        files: ${{ env.ARCHIVE_NAME }}
