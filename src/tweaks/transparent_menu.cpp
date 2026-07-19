@@ -1,4 +1,5 @@
 #include "Font.h"
+#include "MenuManager.h"
 #include "config.h"
 #include "patcher.h"
 #include "safetyhook/easy.hpp"
@@ -20,7 +21,11 @@ extern void Apply() {
     }
     
     // Set menu background alpha
-    patch::set<uint32_t>(0x57B982 + 1, settings.bg_alpha);
+    static auto hook = safetyhook::create_mid(0x57B987, [](safetyhook::Context& ctx) {
+        if (!FrontEndMenuManager.m_bGameNotLoaded) {
+            *reinterpret_cast<uint32_t*>(ctx.esp) = settings.bg_alpha;
+        }
+    });
 
     // Do not render background sprite when paused
     patch::jmp(0x57B9F1,
