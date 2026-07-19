@@ -28,7 +28,11 @@ set_target_properties(tweaks_sa PROPERTIES
 )
 
 if(NOT MSVC)
-    target_link_options(tweaks_sa PRIVATE "LINKER:--exclude-all-symbols")
+    target_link_options(tweaks_sa
+      PRIVATE
+        "LINKER:--exclude-all-symbols"
+        "-static"
+    )
 endif()
 
 target_include_directories(tweaks_sa
