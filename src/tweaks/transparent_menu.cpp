@@ -27,20 +27,23 @@ extern void Apply() {
         }
     });
 
+    struct Hook {
+        static void CALLCONV_FASTCALL CSprite2d__Draw(CSprite2d* self, uintptr_t /*edx*/, const CRect& posn, const CRGBA& color) {
+            if (FrontEndMenuManager.m_bGameNotLoaded) {
+                self->Draw(posn, color);
+            }
+        }
+
+        static void Render2dStuff() {
+            if (!FrontEndMenuManager.m_bMenuActive) {
+                // TODO: add Render2dStuff to the SDK
+                reinterpret_cast<void(*)()>(0x53E230)();
+            }
+        }
+    };
+
     // Do not render background sprite when paused
-    patch::jmp(0x57B9F1,
-        "\xA0\x31\x68\xBA\x00" // mov al, [0xBA6748 + 0xE9] ; FrontEndMenuManager.m_bMainMenuSwitch
-        "\x84\xC0"             // test al, al
-        "\x75\x08"             // jne origBytes
-        "\x50"                 // push eax
-        "\xB8\xF6\xB9\x57\x00" // mov eax, 0x57B9F6
-        "\xFF\xE0"             // jmp eax
-                               // origBytes:
-        "\x8D\x4C\x24\x24"     // lea ecx, [esp + 0x24]
-        "\x51"                 // push ecx
-        "\xB8\xF6\xB9\x57\x00" // mov eax, 0x57B9F6
-        "\xFF\xE0"             // jmp eax
-    );
+    patch::call(0x57B9FD, Hook::CSprite2d__Draw);
 
     // Keep rendering world in the menu
     patch::nop(0x53E9B3, 6);
@@ -51,16 +54,7 @@ extern void Apply() {
 
     // Skip `Render2dStuff` when menu is active
     // Fixes map segments not loading due to the `CHud::Draw`
-    patch::jmp(0x53EB12,
-        "\xA0\xA4\x67\xBA\x00" // mov al, [0xBA6748 + 0x5C] ; FrontEndMenuManager.m_bMenuActive
-        "\x84\xC0"             // test al, al
-        "\x75\x07"             // jne skip
-        "\xB8\x30\xE2\x53\x00" // mov eax, 0x53E230 ; Render2dStuff
-        "\xFF\xD0"             // call eax
-                               // skip:
-        "\xB8\x17\xEB\x53\x00" // mov eax, 0x53EB17
-        "\xFF\xE0"             // jmp eax
-    );
+    patch::call(0x53EB12, Hook::Render2dStuff);
 
     // Prevent `CHeli::AddHeliSearchLight` buffer overflow due to
     // `CHeli::NumberOfSearchLights` not being reset each frame
