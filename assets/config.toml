@@ -45,6 +45,9 @@ always-warp-gang-with-player = true
 # 'allow-vaulting': Allows CJ to vault on some vehicle parts that are thin enough, but it may not look right.
 climbable-vehicles = { enabled = true, ignore-col-spheres = true, allow-vaulting = true }
 
+# Wind will affect planes/helicopters created by missions.
+wind-affects-mission-vehicles = true
+
 [tweaks.hud]
 # Displays ammo even if player has more than 9998.
 # Also displays the actual amount for the flamethrower (the game divides by 10 for some reason).

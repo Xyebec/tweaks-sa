@@ -33,6 +33,7 @@ static struct MinorTweaks {
             bool ignore_col_spheres;
             bool allow_vaulting;
         } climbable_vehicles;
+        bool wind_affects_mission_vehicles;
     } gameplay;
     struct Hud {
         bool always_show_ammo;
@@ -59,7 +60,7 @@ extern void Apply() {
             CGame::currArea = CEntryExit::ms_spawnPoint->m_nArea;
         });
     }
-    
+
     // TODO: figure out a better approach
     if (settings.fixes.fix_car_generator_blockage) {
         static auto hook = safetyhook::create_mid(0x6F32FD, [](safetyhook::Context& ctx) {
@@ -150,7 +151,7 @@ extern void Apply() {
         // Unconditionally call `CEntryExit::WarpGangWithPlayer`
         patch::nop(0x440A1C, 2);
     }
-    
+
     // TODO: rearrange OG code so it checks both vehicles and objects
     if (settings.gameplay.climbable_vehicles.enabled) {
         // Skip vehicle type checks in `CTaskSimpleClimb::ScanToGrabSectorList`
@@ -196,6 +197,10 @@ extern void Apply() {
             // Remove `!m_ClimbEntity->IsVehicle()` check for `CTaskSimpleClimb::TestForVault`
             patch::nop(0x68052D, 2);
         }
+    }
+
+    if (settings.gameplay.wind_affects_mission_vehicles) {
+        patch::nop(0x6D8670, 2);
     }
     
     if (settings.hud.always_show_ammo) {
