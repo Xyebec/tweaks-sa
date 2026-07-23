@@ -33,6 +33,7 @@ static struct MinorTweaks {
             bool ignore_col_spheres;
             bool allow_vaulting;
         } climbable_vehicles;
+        bool towable_mission_vehicles;
         bool wind_affects_mission_vehicles;
     } gameplay;
     struct Hud {
@@ -199,10 +200,15 @@ extern void Apply() {
         }
     }
 
+    if (settings.gameplay.towable_mission_vehicles) {
+        // Remove `!bIsLocked` check
+        patch::nop(0x6A436C, 2);
+    }
+    
     if (settings.gameplay.wind_affects_mission_vehicles) {
         patch::nop(0x6D8670, 2);
     }
-    
+
     if (settings.hud.always_show_ammo) {
         // Show ammo even if `totalAmmo >= 9999`
         patch::nop(0x58955A, 6);

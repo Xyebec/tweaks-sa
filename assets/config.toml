@@ -45,6 +45,9 @@ always-warp-gang-with-player = true
 # 'allow-vaulting': Allows CJ to vault on some vehicle parts that are thin enough, but it may not look right.
 climbable-vehicles = { enabled = true, ignore-col-spheres = true, allow-vaulting = true }
 
+# Towable mission-created vehicles.
+towable-mission-vehicles = true
+
 # Wind will affect planes/helicopters created by missions.
 wind-affects-mission-vehicles = true
 
