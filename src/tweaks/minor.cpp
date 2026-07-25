@@ -41,6 +41,7 @@ static struct MinorTweaks {
     struct Visuals {
         bool disable_heat_haze;
         bool disable_speed_blur;
+        bool rhino_headlights;
         bool scorched_cj;
     } visuals;
 } settings;
@@ -223,6 +224,13 @@ extern void Apply() {
 
     if (settings.visuals.disable_speed_blur) {
         patch::nop(0x704E8A, 5);
+    }
+
+    if (settings.visuals.rhino_headlights) {
+        // DoHeadLightBeam in CAutomobile::Render
+        patch::nop(0x6A2EAF, 2);
+        // DoVehicleLights in CAutomobile::PreRender
+        patch::nop(0x6ABC85, 2);
     }
 
     if (settings.visuals.scorched_cj) {
