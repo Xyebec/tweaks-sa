@@ -19,7 +19,6 @@ static struct MinorTweaks {
         bool fix_police_bike_siren;
         bool fix_zoom_uncrouching;
         bool ganton_garage_four_slots;
-        bool scorched_cj;
     } fixes;
     struct Gameplay {
         bool climb_everywhere;
@@ -42,6 +41,7 @@ static struct MinorTweaks {
     struct Visuals {
         bool disable_heat_haze;
         bool disable_speed_blur;
+        bool scorched_cj;
     } visuals;
 } settings;
 
@@ -101,15 +101,10 @@ extern void Apply() {
         patch::call(0x688009, Hook::CPad__GetSprintNo1stPersonAim); // Zoom out
         patch::call(0x688018, Hook::CPad__JumpJustDownNo1stPersonAim); // Zoom in
     }
-    
+
     if (settings.fixes.ganton_garage_four_slots) {
         patch::copy_slice(0x44BF1D, { 0xB1, 0x01, 0x90 }); // mov cl, 1 ; nop
         patch::copy_slice(0x44BD90, { 0xB0, 0x01, 0x90 }); // mov al, 1 ; nop
-    }
-    
-    if (settings.fixes.scorched_cj) {
-        // Skip `!CPed::IsPlayer` check
-        patch::nop(0x53A669, 6);
     }
 
     if (settings.gameplay.climb_everywhere) {
@@ -228,6 +223,11 @@ extern void Apply() {
 
     if (settings.visuals.disable_speed_blur) {
         patch::nop(0x704E8A, 5);
+    }
+
+    if (settings.visuals.scorched_cj) {
+        // Skip `!CPed::IsPlayer` check
+        patch::nop(0x53A669, 6);
     }
 }
 

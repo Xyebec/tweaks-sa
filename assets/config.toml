@@ -14,9 +14,6 @@ fix-zoom-uncrouching = true
 # Makes the number of garage slots in Ganton consistent with other garages.
 ganton-garage-four-slots = true
 
-# When CJ dies from fire, his body will char like other pedestrians'.
-scorched-cj = true
-
 [tweaks.gameplay]
 # Allows climbing in interiors.
 climb-everywhere = true
@@ -62,6 +59,9 @@ disable-heat-haze = true
 
 # Disables speed blur effect.
 disable-speed-blur = true
+
+# When CJ dies from fire, his body will char like other pedestrians'.
+scorched-cj = true
 
 [definitive-drive-by]
 enabled = true
