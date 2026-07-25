@@ -15,8 +15,18 @@ fix-zoom-uncrouching = true
 ganton-garage-four-slots = true
 
 [tweaks.gameplay]
+# Recruited gang members will follow the player into every interior.
+always-warp-gang-with-player = true
+
 # Allows climbing in interiors.
 climb-everywhere = true
+
+# Allows climbing on vehicles other than boats and trains.
+# Climbing task is no longer aborted on moving trains.
+#
+# ignore-col-spheres: Collision spheres may prevent climbing on some vehicles at certain angles.
+# 'allow-vaulting': Allows CJ to vault on some vehicle parts that are thin enough, but it may not look right.
+climbable-vehicles = { enabled = true, ignore-col-spheres = true, allow-vaulting = true }
 
 # Removes artificial slowdown of player's vehicle in special cull zones.
 disable-extra-air-resistance = true
@@ -31,16 +41,6 @@ jump-with-heavy-weapons = true
 # during the animation of putting on/taking off goggles,
 # and while standing on entities (trains).
 sprint-everywhere = true
-
-# Recruited gang members will follow the player into every interior.
-always-warp-gang-with-player = true
-
-# Allows climbing on vehicles other than boats and trains.
-# Climbing task is no longer aborted on moving trains.
-#
-# ignore-col-spheres: Collision spheres may prevent climbing on some vehicles at certain angles.
-# 'allow-vaulting': Allows CJ to vault on some vehicle parts that are thin enough, but it may not look right.
-climbable-vehicles = { enabled = true, ignore-col-spheres = true, allow-vaulting = true }
 
 # Towable mission-created vehicles.
 towable-mission-vehicles = true

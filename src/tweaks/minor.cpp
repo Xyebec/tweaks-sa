@@ -21,17 +21,17 @@ static struct MinorTweaks {
         bool ganton_garage_four_slots;
     } fixes;
     struct Gameplay {
-        bool climb_everywhere;
-        bool disable_extra_air_resistance;
-        bool duck_with_any_weapon;
-        bool jump_with_heavy_weapons;
-        bool sprint_everywhere;
         bool always_warp_gang_with_player;
+        bool climb_everywhere;
         struct ClimbableVehicles {
             bool enabled;
             bool ignore_col_spheres;
             bool allow_vaulting;
         } climbable_vehicles;
+        bool disable_extra_air_resistance;
+        bool duck_with_any_weapon;
+        bool jump_with_heavy_weapons;
+        bool sprint_everywhere;
         bool towable_mission_vehicles;
         bool wind_affects_mission_vehicles;
     } gameplay;
@@ -108,45 +108,16 @@ extern void Apply() {
         patch::copy_slice(0x44BD90, { 0xB0, 0x01, 0x90 }); // mov al, 1 ; nop
     }
 
+    if (settings.gameplay.always_warp_gang_with_player) {
+        // Unconditionally call `CEntryExit::WarpGangWithPlayer`
+        patch::nop(0x440A1C, 2);
+    }
+
     if (settings.gameplay.climb_everywhere) {
         // Skip `!CGame::currArea` check in the `CTaskSimpleJump::ProcessPed`
         patch::nop(0x680CA4, 2);
         // Skip `!CGame::currArea` check in the `CTaskSimpleInAir::ProcessPed`
         patch::nop(0x680AC4, 6);
-    }
-
-    if (settings.gameplay.disable_extra_air_resistance) {
-        patch::copy_slice(0x72DDD0, { 0x31, 0xC0, 0xC3 }); // xor eax, eax ; ret
-    }
-
-    if (settings.gameplay.duck_with_any_weapon) {
-        // Skip all weapon-related checks
-        patch::set<uint8_t>(0x692651, 0xEB);
-    }
-    
-    if (settings.gameplay.jump_with_heavy_weapons) {
-        // Remove `CWeaponInfo.flags.bHeavy` check
-        patch::nop(0x6886F8, 6);
-    }
-
-    if (settings.gameplay.sprint_everywhere) {
-        // Make `SurfaceInfos_c::CantSprintOn` always return `false`
-        patch::copy_slice(0x55E870, { 0x31, 0xC0, 0xC2, 0x04, 0x00 }); // xor eax, eax ; ret 4
-
-        // Remove `m_bPlayerSprintDisabled` check for the `CPlayerPed::ControlButtonSprint`
-        patch::nop(0x60A667, 2);
-        // Remove `m_bPlayerSprintDisabled` check for the `CTaskSimplePlayerOnFoot::PlayerControlZelda`
-        patch::nop(0x6885FA, 2);
-        // Remove `m_bPlayerSprintDisabled` check for the `CTaskSimpleGoToPoint::ProcessPed`
-        patch::nop(0x66D93C, 2);
-
-        // Allow sprint on entities (trains)
-        patch::set<uint8_t>(0x6885A5, 0xEB);
-    }
-    
-    if (settings.gameplay.always_warp_gang_with_player) {
-        // Unconditionally call `CEntryExit::WarpGangWithPlayer`
-        patch::nop(0x440A1C, 2);
     }
 
     // TODO: rearrange OG code so it checks both vehicles and objects
@@ -196,11 +167,40 @@ extern void Apply() {
         }
     }
 
+    if (settings.gameplay.disable_extra_air_resistance) {
+        patch::copy_slice(0x72DDD0, { 0x31, 0xC0, 0xC3 }); // xor eax, eax ; ret
+    }
+
+    if (settings.gameplay.duck_with_any_weapon) {
+        // Skip all weapon-related checks
+        patch::set<uint8_t>(0x692651, 0xEB);
+    }
+    
+    if (settings.gameplay.jump_with_heavy_weapons) {
+        // Remove `CWeaponInfo.flags.bHeavy` check
+        patch::nop(0x6886F8, 6);
+    }
+
+    if (settings.gameplay.sprint_everywhere) {
+        // Make `SurfaceInfos_c::CantSprintOn` always return `false`
+        patch::copy_slice(0x55E870, { 0x31, 0xC0, 0xC2, 0x04, 0x00 }); // xor eax, eax ; ret 4
+
+        // Remove `m_bPlayerSprintDisabled` check for the `CPlayerPed::ControlButtonSprint`
+        patch::nop(0x60A667, 2);
+        // Remove `m_bPlayerSprintDisabled` check for the `CTaskSimplePlayerOnFoot::PlayerControlZelda`
+        patch::nop(0x6885FA, 2);
+        // Remove `m_bPlayerSprintDisabled` check for the `CTaskSimpleGoToPoint::ProcessPed`
+        patch::nop(0x66D93C, 2);
+
+        // Allow sprint on entities (trains)
+        patch::set<uint8_t>(0x6885A5, 0xEB);
+    }
+
     if (settings.gameplay.towable_mission_vehicles) {
         // Remove `!bIsLocked` check
         patch::nop(0x6A436C, 2);
     }
-    
+
     if (settings.gameplay.wind_affects_mission_vehicles) {
         patch::nop(0x6D8670, 2);
     }
@@ -217,7 +217,7 @@ extern void Apply() {
         // Show actual flamethrower ammo (the game divides by 10 by default)
         patch::set<uint8_t>(0x58940E, 0xEB);
     }
-    
+
     if (settings.visuals.disable_heat_haze) {
         patch::nop(0x705116, 5);
     }
