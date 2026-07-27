@@ -4,6 +4,10 @@ project(TweaksSA
   LANGUAGES C CXX
 )
 
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported)
 
