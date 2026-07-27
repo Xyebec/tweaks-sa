@@ -7,7 +7,6 @@
 #include "CompressedVector.h"
 #include "Entity.h"
 #include "Matrix.h"
-#include "ModelInfo.h"
 #include "Renderer.h"
 #include "VisibilityPlugins.h"
 #include "config.h"
@@ -225,12 +224,7 @@ static void DrawEntity(CEntity* entity) {
         return;
     }
 
-    const auto index = entity->m_nModelIndex;
-    if (CModelInfo::ms_modelInfoPtrs[index] == nullptr) {
-        return;
-    }
-
-    const auto* colModel = CModelInfo::ms_modelInfoPtrs[index]->m_pColModel;
+    const auto* colModel = entity->GetColModel();
     if (colModel == nullptr) {
         return;
     }
