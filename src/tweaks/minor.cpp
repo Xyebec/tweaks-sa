@@ -31,6 +31,7 @@ static struct MinorTweaks {
         bool disable_extra_air_resistance;
         bool duck_with_any_weapon;
         bool jump_with_heavy_weapons;
+        bool normal_train_camera;
         bool sprint_everywhere;
         bool towable_mission_vehicles;
         bool wind_affects_mission_vehicles;
@@ -179,6 +180,15 @@ extern void Apply() {
     if (settings.gameplay.jump_with_heavy_weapons) {
         // Remove `CWeaponInfo.flags.bHeavy` check
         patch::nop(0x6886F8, 6);
+    }
+
+    if (settings.gameplay.normal_train_camera) {
+        // Disable forced cinematic camera
+        patch::jmp_short(0x52A50B, 0x52A536);
+
+        // Enable camera mode switching
+        patch::set<uint16_t>(0x528150 + 2, MODE_CAM_ON_A_STRING);
+        patch::nop(0x52815B, 5);
     }
 
     if (settings.gameplay.sprint_everywhere) {

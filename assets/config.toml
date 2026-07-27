@@ -37,6 +37,9 @@ duck-with-any-weapon = true
 # Allows jumping with weapons marked as heavy in the weapon.dat, such as a minigun.
 jump-with-heavy-weapons = true
 
+# Removes forced cinematic camera in trains and allows to change camera mode manually.
+normal-train-camera = true
+
 # Allows sprinting on any surface during any mission,
 # during the animation of putting on/taking off goggles,
 # and while standing on entities (trains).
