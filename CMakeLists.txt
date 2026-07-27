@@ -36,6 +36,7 @@ if(NOT MSVC)
       PRIVATE
         "LINKER:--exclude-all-symbols"
         "-static"
+        $<$<CONFIG:Release>:-s>
     )
 endif()
 
@@ -46,14 +47,6 @@ target_include_directories(tweaks_sa
 )
 
 configure_file(assets/config.toml ${PROJECT_NAME}.toml COPYONLY)
-
-if(NOT MSVC AND CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_custom_command(
-        TARGET tweaks_sa POST_BUILD
-        COMMAND ${CMAKE_STRIP} $<TARGET_FILE:tweaks_sa>
-        COMMENT "Stripping release binary"
-    )
-endif()
 
 add_subdirectory(lib/safetyhook)
 target_link_libraries(tweaks_sa PRIVATE safetyhook)
