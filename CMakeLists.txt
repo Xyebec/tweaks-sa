@@ -23,7 +23,7 @@ file(GLOB_RECURSE HEADERS ${SRC_DIR}/*.h)
 
 add_library(tweaks_sa SHARED ${SOURCES} ${HEADERS})
 
-target_compile_features(tweaks_sa PRIVATE cxx_std_23)
+target_compile_features(tweaks_sa PRIVATE cxx_std_26)
 
 set_target_properties(tweaks_sa PROPERTIES
   PREFIX ""
