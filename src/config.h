@@ -74,6 +74,21 @@ public:
         const std::pmr::polymorphic_allocator<char>& alloc; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
         std::string_view path;
         const toml::node* node;
+
+        template <typename T>
+        auto GetNodeAs() const {
+            if (node == nullptr) {
+                throw FieldNotFoundError{path};
+            }
+
+            const auto* value = node->as<T>();
+            if (value == nullptr) {
+                constexpr auto expectedType = TypeToString<T>();
+                throw BadTypeError{path, expectedType};
+            }
+
+            return value;
+        }
     };
 
     template <typename T>
@@ -100,20 +115,6 @@ public:
 
 private:
     explicit Config(toml::table&& table) noexcept;
-
-    template <typename T>
-    static auto GetNodeAs(std::string_view path, const toml::node* node, std::string_view expectedType) {
-        if (node == nullptr) {
-            throw FieldNotFoundError{path};
-        }
-
-        const auto* value = node->as<T>();
-        if (value == nullptr) {
-            throw BadTypeError{path, expectedType};
-        }
-
-        return value;
-    }
 
 private:
     template <FixedString str>
@@ -171,14 +172,27 @@ private:
         pathBuf += ']';
     }
 
+    template <typename T>
+    static constexpr std::string_view TypeToString() = delete;
+
 private:
     toml::table m_root;
 };
 
+template <> constexpr std::string_view Config::TypeToString<std::string>()     { return "string"; }
+template <> constexpr std::string_view Config::TypeToString<int64_t>()         { return "integer"; }
+template <> constexpr std::string_view Config::TypeToString<double>()          { return "float"; }
+template <> constexpr std::string_view Config::TypeToString<bool>()            { return "boolean"; }
+template <> constexpr std::string_view Config::TypeToString<toml::date>()      { return "date"; }
+template <> constexpr std::string_view Config::TypeToString<toml::time>()      { return "time"; }
+template <> constexpr std::string_view Config::TypeToString<toml::date_time>() { return "datetime"; }
+template <> constexpr std::string_view Config::TypeToString<toml::array>()     { return "array"; }
+template <> constexpr std::string_view Config::TypeToString<toml::table>()     { return "table"; }
+
 template <>
 struct Config::De<std::string> {
     static auto Deserialize(const Context& ctx) -> std::string {
-        return **GetNodeAs<std::string>(ctx.path, ctx.node, "string");
+        return **ctx.GetNodeAs<std::string>();
     }
 };
 
@@ -187,9 +201,9 @@ requires std::is_integral_v<T>
 struct Config::De<T> {
     static auto Deserialize(const Context& ctx) -> T {
         if constexpr (std::is_same_v<T, bool>) {
-            return **GetNodeAs<bool>(ctx.path, ctx.node, "boolean");
+            return **ctx.GetNodeAs<bool>();
         } else {
-            const auto* integer = GetNodeAs<int64_t>(ctx.path, ctx.node, "integer");
+            const auto* integer = ctx.GetNodeAs<int64_t>();
             if constexpr (std::is_unsigned_v<T>) {
                 if (**integer < 0) {
                     throw SignedUnsignedMismatchError{ctx.path};
@@ -210,7 +224,7 @@ template <typename T>
 requires std::is_floating_point_v<T>
 struct Config::De<T> {
     static auto Deserialize(const Context& ctx) -> T {
-        return static_cast<T>(**GetNodeAs<double>(ctx.path, ctx.node, "float"));
+        return static_cast<T>(**ctx.GetNodeAs<double>());
     }
 };
 
@@ -228,7 +242,7 @@ struct Config::De<std::optional<T>> {
 template <typename T>
 struct Config::De<std::vector<T>> {
     static auto Deserialize(const Context& ctx) -> std::vector<T> {
-        const auto* array = GetNodeAs<toml::array>(ctx.path, ctx.node, "array");
+        const auto* array = ctx.GetNodeAs<toml::array>();
 
         auto pathBuf = CreatePathBuf(ctx.alloc, ctx.path);
         
@@ -249,7 +263,7 @@ struct Config::De<std::vector<T>> {
 template <typename T, size_t N>
 struct Config::De<std::array<T, N>> {
     static auto Deserialize(const Context& ctx) -> std::array<T, N> {
-        const auto* array = GetNodeAs<toml::array>(ctx.path, ctx.node, "array");
+        const auto* array = ctx.GetNodeAs<toml::array>();
     
         if (array->size() != N) {
             throw SizeMismatchError{ctx.path, N, array->size()};
@@ -275,7 +289,7 @@ struct Config::De<std::tuple<Ts...>> {
     static auto Deserialize(const Context& ctx) -> std::tuple<Ts...> {
         static constexpr auto N = sizeof...(Ts);
 
-        const auto* array = GetNodeAs<toml::array>(ctx.path, ctx.node, "array");
+        const auto* array = ctx.GetNodeAs<toml::array>();
     
         if (array->size() != N) {
             throw SizeMismatchError{ctx.path, N, array->size()};
@@ -307,7 +321,7 @@ template <typename T>
 requires std::is_aggregate_v<T> && std::is_class_v<T>
 struct Config::De<T> {
     static auto Deserialize(const Context& ctx) -> T {
-        const auto* table = GetNodeAs<toml::table>(ctx.path, ctx.node, "table");
+        const auto* table = ctx.GetNodeAs<toml::table>();
 
         auto pathBuf = CreatePathBuf(ctx.alloc, ctx.path);
         pathBuf += '.';
