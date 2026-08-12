@@ -10,14 +10,14 @@ if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported)
-
-if(ipo_supported)
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
-else()
-    message(STATUS "LTO is not supported")
-endif()
+# include(CheckIPOSupported)
+# check_ipo_supported(RESULT ipo_supported)
+#
+# if(ipo_supported)
+#     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+# else()
+#     message(STATUS "LTO is not supported")
+# endif()
 
 set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
 file(GLOB_RECURSE SOURCES ${SRC_DIR}/*.cpp)
