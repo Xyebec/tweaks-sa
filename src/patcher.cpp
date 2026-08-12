@@ -68,13 +68,6 @@ namespace patch {
         return get_vmt(self)[index];
     }
     
-    void set_virtual_method(const void* self, void* func, size_t index) {
-        auto** vmt = get_vmt(self);
-        const auto* method = vmt[index];
-        const auto up = ScopedUnprotect{method, sizeof(method)};
-        vmt[index] = func;
-    }
-
     auto find_function(const char* module_name, const char* function_name) -> void* {
         auto *const module = GetModuleHandleA(module_name);
         return module != nullptr ? reinterpret_cast<void*>(GetProcAddress(module, function_name)) : nullptr;

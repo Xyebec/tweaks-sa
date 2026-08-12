@@ -117,7 +117,15 @@ namespace patch {
     /// Gets a virtual method from the table @self at the index @index
     auto get_virtual_method(const void* self, size_t index) -> void*;
 
-    void set_virtual_method(const void* self, void* func, size_t index);
+    template <typename Fn>
+    inline auto set_virtual_method(const void* self, Fn* func, size_t index) -> Fn* {
+        auto** vmt = get_vmt(self);
+        Fn** method = reinterpret_cast<Fn**>(&vmt[index]);
+        const auto up = ScopedUnprotect{method, sizeof(Fn*)};
+        const Fn* orig = *method;
+        *method = func;
+        return orig;
+    }
     
     template <uintptr_t address, typename Ret, typename... Args>
     inline auto call_static(Args... args) -> Ret {
