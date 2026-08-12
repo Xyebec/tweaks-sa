@@ -4,6 +4,8 @@ project(TweaksSA
   LANGUAGES C CXX
 )
 
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
@@ -60,3 +62,5 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(pluginsdk)
 target_link_libraries(tweaks_sa PRIVATE pluginsdk::gtasa)
+
+target_link_libraries(tweaks_sa PRIVATE d3dx9)

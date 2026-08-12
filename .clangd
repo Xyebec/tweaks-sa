@@ -1,3 +1,9 @@
 CompileFlags:
-  Add: [--target=i686-w64-mingw32]
-  Remove: [-fmodules-ts, -fmodule-mapper=*, -fdeps-format=*]
+  Add:
+    - --target=i686-w64-mingw32
+    - -Wno-c23-extensions # #embed is a Clang extension
+
+  Remove:
+    - -fmodules-ts
+    - -fmodule-mapper=*
+    - -fdeps-format=*

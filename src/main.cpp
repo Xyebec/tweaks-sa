@@ -1,5 +1,7 @@
 #include "config.h"
+#include "safetyhook/easy.hpp"
 #include "tweaks/tweaks.h"
+#include "util/dx/resettable.hpp"
 
 #ifndef NOMINMAX
   #define NOMINMAX
@@ -63,6 +65,12 @@ extern BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID /*reserved*/
         exit(EXIT_FAILURE);
         return FALSE;
     }
+
+    // CGame::InitialiseRenderWare
+    static auto _ = safetyhook::create_mid(0x5BF3A1, [](safetyhook::Context& /*ctx*/) {
+        auto* device = *reinterpret_cast<IDirect3DDevice9**>(0xC97C28);
+        dx::hook_device_reset(device);
+    });
 
     ApplyTweaks();
 
