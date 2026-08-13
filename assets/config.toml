@@ -105,5 +105,5 @@ draw-triangles        = true
 color-triangle        = 0x00FF00 # Green
 draw-shadow-triangles = true
 color-shadow-triangle = 0x0000FF # Blue
-draw-pedcol-spheres   = true
-color-pedcol-sphere   = 0xFF2A52 # Pinkish red
+draw-hit-spheres      = true
+color-hit-sphere      = 0xFFFF00 # Yellow

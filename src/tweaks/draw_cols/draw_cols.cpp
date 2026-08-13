@@ -8,6 +8,7 @@
 #include "CompressedVector.h"
 #include "Entity.h"
 #include "Renderer.h"
+#include "VehicleModelInfo.h"
 #include "VisibilityPlugins.h"
 #include "col_renderer.hpp"
 #include "config.h"
@@ -55,7 +56,7 @@ static struct DrawCols {
     bool draw_boxes{true};
     bool draw_triangles{true};
     bool draw_shadow_triangles{true};
-    bool draw_pedcol_spheres{true};
+    bool draw_hit_spheres{true};
     uint32_t hotkey{VK_F11};
     AbgrFromRgb color_bound_box;
     AbgrFromRgb color_bound_sphere;
@@ -64,7 +65,7 @@ static struct DrawCols {
     AbgrFromRgb color_box;
     AbgrFromRgb color_triangle;
     AbgrFromRgb color_shadow_triangle;
-    AbgrFromRgb color_pedcol_sphere;
+    AbgrFromRgb color_hit_sphere;
 } settings;
 
 static void DrawEntity(CEntity* entity) {
@@ -73,14 +74,20 @@ static void DrawEntity(CEntity* entity) {
         return;
     }
 
-    if (entity->m_nType == ENTITY_TYPE_PED) {
-        if (settings.draw_pedcol_spheres) {
+    if (settings.draw_hit_spheres) {
+        if (entity->m_nType == ENTITY_TYPE_PED) {
             const auto* colModel = CPedModelInfo_AnimatePedColModelSkinned(
                 CModelInfo::ms_modelInfoPtrs[entity->m_nModelIndex],
                 entity->m_pRwClump);
 
             for (const auto& sphere : std::span{colModel->m_pColData->m_pSpheres, colModel->m_pColData->m_nNumSpheres}) {
-                s_renderer->AddSphere(*matrix, sphere.m_vecCenter, sphere.m_fRadius, settings.color_pedcol_sphere);
+                s_renderer->AddSphere(*matrix, sphere.m_vecCenter, sphere.m_fRadius, settings.color_hit_sphere);
+            }
+        } else if (entity->m_nType == ENTITY_TYPE_VEHICLE) {
+            const auto* modelInfo = reinterpret_cast<CVehicleModelInfo*>(CModelInfo::ms_modelInfoPtrs[entity->m_nModelIndex]);
+            const auto& gasTankPos = modelInfo->m_pVehicleStruct->m_avDummyPos[8];
+            if (!gasTankPos.IsZero()) {
+                s_renderer->AddSphere(*matrix, gasTankPos, 0.25f, settings.color_hit_sphere);
             }
         }
     }
