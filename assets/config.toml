@@ -107,3 +107,5 @@ draw-shadow-triangles = true
 color-shadow-triangle = 0x0000FF # Blue
 draw-hit-spheres      = true
 color-hit-sphere      = 0xFFFF00 # Yellow
+draw-bullets          = true
+color-bullet          = 0x00FFFF # Cyan

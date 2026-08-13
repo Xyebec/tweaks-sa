@@ -1,3 +1,4 @@
+#include "BulletInfo.h"
 #include "ColBox.h"
 #include "ColDisk.h"
 #include "ColLine.h"
@@ -8,6 +9,7 @@
 #include "CompressedVector.h"
 #include "Entity.h"
 #include "Renderer.h"
+#include "ShotInfo.h"
 #include "VehicleModelInfo.h"
 #include "VisibilityPlugins.h"
 #include "col_renderer.hpp"
@@ -57,6 +59,7 @@ static struct DrawCols {
     bool draw_triangles{true};
     bool draw_shadow_triangles{true};
     bool draw_hit_spheres{true};
+    bool draw_bullets{true};
     uint32_t hotkey{VK_F11};
     AbgrFromRgb color_bound_box;
     AbgrFromRgb color_bound_sphere;
@@ -66,6 +69,7 @@ static struct DrawCols {
     AbgrFromRgb color_triangle;
     AbgrFromRgb color_shadow_triangle;
     AbgrFromRgb color_hit_sphere;
+    AbgrFromRgb color_bullet;
 } settings;
 
 static void DrawEntity(CEntity* entity) {
@@ -171,6 +175,25 @@ static void RenderCollision(IDirect3DDevice9* device) {
     ) {
         auto* entity = static_cast<CEntity*>(link->data.pObj);
         DrawEntity(entity);
+    }
+
+    if (settings.draw_bullets) {
+        const auto identity = CMatrix::GetIdentity();
+
+        for (const auto& bulletInfo : std::span{aBulletInfos, MAX_BULLET_INFOS}) {
+            if (bulletInfo.m_bExists) {
+                // Technically, bullets are points and have no radius,
+                // but for the sake of visibility it should be at least some
+                s_renderer->AddSphere(identity, bulletInfo.m_vecPosition, 0.1f, settings.color_bullet);
+            }
+        }
+
+        for (const auto& shotInfo : std::span{aShotInfos, MAX_SHOT_INFOS}) {
+            if (shotInfo.m_bExist) {
+                const auto range = std::max(shotInfo.m_fRange, 1.0f); // 0x739F73
+                s_renderer->AddSphere(identity, shotInfo.m_vecOrigin, range, settings.color_bullet);
+            }
+        }
     }
 
     s_renderer->Render(device);
