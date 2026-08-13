@@ -63,9 +63,6 @@ disable-heat-haze = true
 # Disables speed blur effect.
 disable-speed-blur = true
 
-# Allows Rhino to use headlights like other cars.
-rhino-headlights = true
-
 # When CJ dies from fire, his body will char like other pedestrians'.
 scorched-cj = true
 
