@@ -7,8 +7,8 @@
 #include "Ped.h"
 #include "Timer.h"
 #include "common.h"
-#include "config.h"
-#include "patcher.h"
+#include "config.hpp"
+#include "patcher.hpp"
 #include "safetyhook/context.hpp"
 #include "safetyhook/easy.hpp"
 

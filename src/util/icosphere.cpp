@@ -1,4 +1,4 @@
-#include "icosphere.h"
+#include "icosphere.hpp"
 #include <cmath>
 #include <unordered_map>
 #include <unordered_set>

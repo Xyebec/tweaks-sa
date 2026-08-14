@@ -13,7 +13,7 @@
 #include "VehicleModelInfo.h"
 #include "VisibilityPlugins.h"
 #include "col_renderer.hpp"
-#include "config.h"
+#include "config.hpp"
 #include "eEntityType.h"
 #include "safetyhook/easy.hpp"
 

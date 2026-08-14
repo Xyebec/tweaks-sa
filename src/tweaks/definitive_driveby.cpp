@@ -1,10 +1,10 @@
 #include "Camera.h"
 #include "Enums/eModelID.h"
 #include "Vehicle.h"
-#include "config.h"
+#include "config.hpp"
 #include "safetyhook/context.hpp"
 #include "safetyhook/easy.hpp"
-#include "utils.h"
+#include "utils.hpp"
 
 static struct DefinitiveDriveBy {
     bool enabled;

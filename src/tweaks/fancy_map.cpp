@@ -2,9 +2,9 @@
 #include "MenuManager.h"
 #include "Radar.h"
 #include "Text.h"
-#include "config.h"
+#include "config.hpp"
 #include "Vector2D.h"
-#include "patcher.h"
+#include "patcher.hpp"
 #include "safetyhook/context.hpp"
 #include "safetyhook/easy.hpp"
 

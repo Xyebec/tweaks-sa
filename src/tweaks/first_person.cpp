@@ -23,14 +23,14 @@
 #include "WeaponInfo.h"
 #include "World.h"
 #include "common.h"
-#include "config.h"
+#include "config.hpp"
 #include "eAnimations.h"
 #include "ePedBones.h"
 #include "ePedState.h"
-#include "patcher.h"
+#include "patcher.hpp"
 #include "safetyhook/easy.hpp"
 #include "safetyhook/inline_hook.hpp"
-#include "utils.h"
+#include "utils.hpp"
 #include <algorithm>
 #include <cmath>
 #include <utility>

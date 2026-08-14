@@ -3,7 +3,7 @@
 #include "Matrix.h"
 #include "Vector.h"
 #include "util/dx/dx.hpp"
-#include "util/icosphere.h"
+#include "util/icosphere.hpp"
 
 struct SphereInstance {
     float x, y, z, radius;
@@ -52,8 +52,8 @@ private:
         std::vector<GeometryVertex> cubeVertices;
         std::vector<GeometryIndex> cubeIndices;
 
-        std::vector<GeometryVertex> coneVertices;
-        std::vector<GeometryIndex> coneIndices;
+        std::vector<GeometryVertex> cylinderVertices;
+        std::vector<GeometryIndex> cylinderIndices;
     } m;
 
     ColRenderer(M&& m) : m{std::move(m)} {}

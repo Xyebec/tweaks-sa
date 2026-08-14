@@ -74,22 +74,22 @@ auto ColRenderer::Create(IDirect3DDevice9* device) -> ColRenderer {
     cubeVertices.reserve(32768);
     auto cubeIndices = std::vector<GeometryIndex>{};
     cubeIndices.reserve(131072);
-    auto coneVertices = std::vector<GeometryVertex>{};
-    coneVertices.reserve(512);
-    auto coneIndices = std::vector<GeometryIndex>{};
-    coneIndices.reserve(512);
+    auto cylinderVertices = std::vector<GeometryVertex>{};
+    cylinderVertices.reserve(512);
+    auto cylinderIndices = std::vector<GeometryIndex>{};
+    cylinderIndices.reserve(512);
 
     return ColRenderer{M{
-        .spheres         = std::move(spherePipeline),
-        .geometryShaders = std::move(geometryShaders),
-        .vbo             = std::move(vbo),
-        .ibo             = std::move(ibo),
-        .triVertices     = std::move(triVertices),
-        .lineVertices    = std::move(lineVertices),
-        .cubeVertices    = std::move(cubeVertices),
-        .cubeIndices     = std::move(cubeIndices),
-        .coneVertices    = std::move(coneVertices),
-        .coneIndices     = std::move(coneIndices),
+        .spheres          = std::move(spherePipeline),
+        .geometryShaders  = std::move(geometryShaders),
+        .vbo              = std::move(vbo),
+        .ibo              = std::move(ibo),
+        .triVertices      = std::move(triVertices),
+        .lineVertices     = std::move(lineVertices),
+        .cubeVertices     = std::move(cubeVertices),
+        .cubeIndices      = std::move(cubeIndices),
+        .cylinderVertices = std::move(cylinderVertices),
+        .cylinderIndices  = std::move(cylinderIndices),
     }};
 }
 
@@ -199,11 +199,11 @@ void ColRenderer::AddCylinder(const CMatrix& ltm, const CVector& center, float r
         return indices;
     }();
 
-    InsertIndices(m.coneVertices.size(), std::span{INDICES.data(), INDICES.size()}, m.coneIndices);
+    InsertIndices(m.cylinderVertices.size(), std::span{INDICES.data(), INDICES.size()}, m.cylinderIndices);
 
-    const auto vertexOffset = m.coneVertices.size();
-    m.coneVertices.resize(vertexOffset + NUM_VERTICES);
-    auto* vertices = &m.coneVertices[vertexOffset];
+    const auto vertexOffset = m.cylinderVertices.size();
+    m.cylinderVertices.resize(vertexOffset + NUM_VERTICES);
+    auto* vertices = &m.cylinderVertices[vertexOffset];
 
     vertices[TOP_CENTER_IDX].position = topCenter;
     vertices[BOTTOM_CENTER_IDX].position = bottomCenter;
@@ -281,10 +281,10 @@ void ColRenderer::Render(IDirect3DDevice9* device) {
         device->DrawIndexedPrimitive(D3DPT_LINELIST, 0, 0, m.vbo.size(), 0, m.ibo.size() / 2);
     }
 
-    if (!m.coneVertices.empty()) {
-        m.vbo.assign(device, m.coneVertices);
+    if (!m.cylinderVertices.empty()) {
+        m.vbo.assign(device, m.cylinderVertices);
         m.vbo.bind(device, 0);
-        m.ibo.assign(device, m.coneIndices);
+        m.ibo.assign(device, m.cylinderIndices);
         m.ibo.bind(device);
         device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, m.vbo.size(), 0, m.ibo.size() / 3);
     }
@@ -296,6 +296,6 @@ void ColRenderer::ClearBuffers() {
     m.lineVertices.clear();
     m.cubeVertices.clear();
     m.cubeIndices.clear();
-    m.coneVertices.clear();
-    m.coneIndices.clear();
+    m.cylinderVertices.clear();
+    m.cylinderIndices.clear();
 }

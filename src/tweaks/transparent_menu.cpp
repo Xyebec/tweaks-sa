@@ -1,7 +1,7 @@
 #include "Font.h"
 #include "MenuManager.h"
-#include "config.h"
-#include "patcher.h"
+#include "config.hpp"
+#include "patcher.hpp"
 #include "safetyhook/easy.hpp"
 
 static struct TransparentMenu {

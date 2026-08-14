@@ -1,5 +1,5 @@
 #define TOML_IMPLEMENTATION
-#include "config.h"
+#include "config.hpp"
 #include <format>
 
 Config::FieldNotFoundError::FieldNotFoundError(std::string_view path)

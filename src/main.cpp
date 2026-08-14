@@ -1,6 +1,6 @@
-#include "config.h"
+#include "config.hpp"
 #include "safetyhook/easy.hpp"
-#include "tweaks/tweaks.h"
+#include "tweaks/tweaks.hpp"
 #include "util/dx/resettable.hpp"
 
 #ifndef NOMINMAX
