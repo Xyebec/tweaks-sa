@@ -164,7 +164,10 @@ static void DrawEntity(CEntity* entity) {
 static auto s_mode = DrawColsMode::Disabled;
 
 static void RenderCollision(IDirect3DDevice9* device) {
-    for (auto* entity : std::span{CRenderer::ms_aVisibleEntityPtrs, CRenderer::ms_nNoOfVisibleEntities}) {
+    // Use one of the references to ensure compatibility with Open Limit Adjuster
+    const auto* CRenderer__ms_aVisibleEntityPtrs = *reinterpret_cast<CEntity***>(0x553529);
+
+    for (auto* entity : std::span{CRenderer__ms_aVisibleEntityPtrs, CRenderer::ms_nNoOfVisibleEntities}) {
         DrawEntity(entity);
     }
 
