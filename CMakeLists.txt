@@ -55,8 +55,8 @@ if(MSVC)
 else()
     target_link_options(TweaksSA PRIVATE
         "LINKER:--exclude-all-symbols"
-        "LINKER:-static"
-        $<$<CONFIG:Release>:LINKER:-s>
+        "-static"
+        $<$<CONFIG:Release>:-s>
     )
 endif()
 
