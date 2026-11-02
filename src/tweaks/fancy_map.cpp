@@ -23,11 +23,13 @@ static auto TransformRadarSpaceToRealWorldPoint(const CVector2D& in) -> CVector2
 
 static struct FancyMap {
     bool enabled;
+    bool widescreen_fix_compat;
     bool remove_bg;
     bool drag_to_move;
     bool fix_speed; // TODO: add speed multiplier var instead
     bool cursor_without_crosshair;
     bool hide_help_text;
+    bool hide_back_button;
 } settings;
 
 namespace fancy_map {
@@ -41,43 +43,47 @@ extern void Apply() {
         return;
     }
 
-    // Remove the gray outline
-    patch::nop(0x575BF6, 5); // Top
-    patch::nop(0x575C40, 5); // Bottom
-    patch::nop(0x575C84, 5); // Left
-    patch::nop(0x575CCE, 5); // Right
+    // These are already implemented by WidescreenFix
+    if (!settings.widescreen_fix_compat) {
+        // Remove the gray outline
+        patch::nop(0x575BF6, 5); // Top
+        patch::nop(0x575C40, 5); // Bottom
+        patch::nop(0x575C84, 5); // Left
+        patch::nop(0x575CCE, 5); // Right
 
-    // Remove the black frame
-    patch::nop(0x575D1F, 5); // Top
-    patch::nop(0x575D6F, 5); // Bottom
-    patch::nop(0x575DC2, 5); // Left
-    patch::nop(0x575E12, 5); // Right
+        // Remove the black frame
+        patch::nop(0x575D1F, 5); // Top
+        patch::nop(0x575D6F, 5); // Bottom
+        patch::nop(0x575DC2, 5); // Left
+        patch::nop(0x575E12, 5); // Right
 
-    // Extend limits of the `CRadar::DrawRadarSectionMap`
-    patch::set<uint8_t>(0x575301, 0xEB); // Bottom (skip RsGlobal.maximumHeight == 448)
-    patch::nop(0x575311, 6); // Bottom // TODO: shifts the zone name
-    patch::set<uint8_t>(0x575351, 0xEB); // Right (skip RsGlobal.maximumWidth == 640)
-    patch::nop(0x575361, 6); // Right
-    patch::set<uint8_t>(0x5754D6, 0xEB); // Left (skip RsGlobal.maximumWidth == 640)
-    patch::nop(0x5754EC, 6); // Left
-    patch::set<uint8_t>(0x575521, 0xEB); // Top (skip RsGlobal.maximumHeight == 448)
-    patch::nop(0x575537, 6); // Top
+        // Extend limits of the `CRadar::DrawRadarSectionMap`
+        patch::set<uint8_t>(0x575301, 0xEB); // Bottom (skip RsGlobal.maximumHeight == 448)
+        patch::nop(0x575311, 6); // Bottom // TODO: shifts the zone name
+        patch::set<uint8_t>(0x575351, 0xEB); // Right (skip RsGlobal.maximumWidth == 640)
+        patch::nop(0x575361, 6); // Right
+        patch::set<uint8_t>(0x5754D6, 0xEB); // Left (skip RsGlobal.maximumWidth == 640)
+        patch::nop(0x5754EC, 6); // Left
+        patch::set<uint8_t>(0x575521, 0xEB); // Top (skip RsGlobal.maximumHeight == 448)
+        patch::nop(0x575537, 6); // Top
 
-    // Keep rendering the 'crosshair' even when cursor is out of (previously removed) bounds
-    patch::jmp(0x5881BE, 0x5881E5);
+        // Keep rendering the 'crosshair' even when cursor is out of (previously removed) bounds
+        patch::jmp(0x5881BE, 0x5881E5);
 
-    // Do not limit 'crosshair' position
-    // patch::nop(0x58822D, 5); // TODO: SilentPatch conflict: https://github.com/CookiePLMonster/SilentPatch/blob/4c0256e90beb1ef4025553cdb31bfd7ac71ae1ed/SilentPatchSA/SilentPatchSA.cpp#L5086
+        // Do not limit 'crosshair' position
+        // patch::nop(0x58822D, 5); // TODO: SilentPatch conflict: https://github.com/CookiePLMonster/SilentPatch/blob/4c0256e90beb1ef4025553cdb31bfd7ac71ae1ed/SilentPatchSA/SilentPatchSA.cpp#L5086
 
+        // Expand the clickable area of the map
+        // Also keeps updating the 'crosshair' position (`m_vMousePos` (world space))
+        patch::nop(0x577C89, 6); // Top
+        patch::nop(0x577CA2, 6); // Bottom
+        patch::nop(0x577CC5, 6); // Left
+        patch::nop(0x577CDE, 6); // Right
+    }
+
+    // Not (yet) fixed by WidescreenFix
     // Skip checking cursor rendering bounds when dragging
     patch::jmp(0x57C00B, 0x57C043);
-        
-    // Expand the clickable area of the map
-    // Also keeps updating the 'crosshair' position (`m_vMousePos` (world space))
-    patch::nop(0x577C89, 6); // Top
-    patch::nop(0x577CA2, 6); // Bottom
-    patch::nop(0x577CC5, 6); // Left
-    patch::nop(0x577CDE, 6); // Right
 
     if (settings.hide_help_text) {
         // Remove map help text
@@ -93,7 +99,7 @@ extern void Apply() {
                 CFont::SetOrientation(eFontAlignment::ALIGN_RIGHT);
                 CFont::SetEdge(1);
                 CFont::SetColor(CRGBA{0xFF, 0xFF, 0xFF, 0xFF});
-                
+
                 const auto x = static_cast<float>(RsGlobal.maximumWidth) - self->StretchX(30.0f);
                 const auto y = static_cast<float>(RsGlobal.maximumHeight) - self->StretchY(10.0f);
                 const auto* text = TheText.Get(key);
@@ -106,7 +112,7 @@ extern void Apply() {
                 CFont::PrintString(x, y, text);
             }
         };
-        
+
         // Unfortunately, simply setting `CFont::SetEdge` to `1` in `CMenuManager::DisplayHelperText`
         // causes a segfault at 0x7FBD4A upon exiting the redefine controls menu,
         // so it's safer to hook like this
@@ -128,11 +134,14 @@ extern void Apply() {
 
     if (settings.drag_to_move) {
         static auto hook = safetyhook::create_mid(0x577D43, [](safetyhook::Context& ctx) {
-            const auto cursorDeltaX = static_cast<float>(FrontEndMenuManager.m_nMousePosX - FrontEndMenuManager.m_nMouseOldPosX);
-            const auto cursorDeltaY = static_cast<float>(FrontEndMenuManager.m_nMousePosY - FrontEndMenuManager.m_nMouseOldPosY);
+            const auto maxWidth  = static_cast<float>(RsGlobal.maximumWidth);
+            const auto maxHeight = static_cast<float>(RsGlobal.maximumHeight);
 
-            FrontEndMenuManager.m_fMapBaseX += cursorDeltaX / (static_cast<float>(RsGlobal.maximumWidth) / 640.0f);
-            FrontEndMenuManager.m_fMapBaseY += cursorDeltaY / (static_cast<float>(RsGlobal.maximumHeight) / 448.0f);
+            const auto deltaX = static_cast<float>(FrontEndMenuManager.m_nMousePosX - FrontEndMenuManager.m_nMouseOldPosX);
+            const auto deltaY = static_cast<float>(FrontEndMenuManager.m_nMousePosY - FrontEndMenuManager.m_nMouseOldPosY);
+
+            FrontEndMenuManager.m_fMapBaseX += settings.widescreen_fix_compat ? (deltaX * 480.0f / maxHeight) : (deltaX * 640.0f / maxWidth);
+            FrontEndMenuManager.m_fMapBaseY += deltaY * 448.0f / maxHeight;
 
             ctx.eip = 0x578785;
         });
@@ -162,10 +171,17 @@ extern void Apply() {
 
     // Fix R*'s nonsensical 'crosshair' pos calculation
     static auto hook = safetyhook::create_mid(0x577F95, [](safetyhook::Context& ctx) {
+        const auto maxWidth  = static_cast<float>(RsGlobal.maximumWidth);
+        const auto maxHeight = static_cast<float>(RsGlobal.maximumHeight);
+
+        const auto mouseX = static_cast<float>(FrontEndMenuManager.m_nMousePosX);
+        const auto mouseY = static_cast<float>(FrontEndMenuManager.m_nMousePosY);
+
         const auto screenSpace = CVector2D{
-            static_cast<float>(FrontEndMenuManager.m_nMousePosX) / (static_cast<float>(RsGlobal.maximumWidth) / 640.0f),
-            static_cast<float>(FrontEndMenuManager.m_nMousePosY) / (static_cast<float>(RsGlobal.maximumHeight) / 448.0f),
+            settings.widescreen_fix_compat ? (mouseX * 480.0f / maxHeight) : (mouseX * 640.0f / maxWidth),
+            mouseY * 448.0f / maxHeight
         };
+
         const auto radarSpace = TransformScreenSpaceToRadarPoint(screenSpace);
         const auto worldSpace = TransformRadarSpaceToRealWorldPoint(radarSpace);
         FrontEndMenuManager.m_vMousePos = worldSpace;
@@ -173,22 +189,24 @@ extern void Apply() {
         ctx.eip = 0x578785;
     });
 
-    // Make the "Back" button unclickable
-    patch::set<uint8_t>(0x5801CA, 0xEB);
+    if (settings.hide_back_button) {
+        // Make the "Back" button unclickable
+        patch::set<uint8_t>(0x5801CA, 0xEB);
 
-    struct Hook {
-        static void CFont__PrintString(float x, float y, const char* text) {
-            if (FrontEndMenuManager.m_nCurrentMenuPage != eMenuPage::MENUPAGE_MAP) {
-                CFont::PrintString(x, y, text);
+        struct Hook {
+            static void CFont__PrintString(float x, float y, const char* text) {
+                if (FrontEndMenuManager.m_nCurrentMenuPage != eMenuPage::MENUPAGE_MAP) {
+                    CFont::PrintString(x, y, text);
+                }
             }
-        }
-    };
-    
-    // Might not be the best approach, but simply removing button from the `MenuPages`
-    // at 0x8CE008 won't work because modloader hijacks all `MenuPages` references
+        };
+        
+        // Might not be the best approach, but simply removing button from the `MenuPages`
+        // at 0x8CE008 won't work because modloader hijacks all `MenuPages` references
 
-    // Do not render the "Back" button
-    patch::call(0x57A1FA, Hook::CFont__PrintString);
+        // Do not render the "Back" button
+        patch::call(0x57A1FA, Hook::CFont__PrintString);
+    }
 }
 
 }

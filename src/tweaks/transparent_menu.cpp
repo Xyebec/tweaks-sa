@@ -50,7 +50,7 @@ extern void Apply() {
 
     // Do not fill screen with black in the `DoRWStuffStartOfFrame`
     // Fixes 1-frame black flickering upon entering menu
-    patch::nop(0x53D78D, 5);
+    patch::set<uint8_t>(0x53D74E, 0xEB);
 
     // Skip `Render2dStuff` when menu is active
     // Fixes map segments not loading due to the `CHud::Draw`
@@ -109,8 +109,8 @@ extern void Apply() {
         patch::set<uint8_t>(0x57ED13 + 1, 0xAC); // R
     }
 
-    // Keep the game from centering cursor in menu
-    patch::nop(0x53E9F1, 5);
+    // // Keep the game from centering cursor in menu
+    // patch::nop(0x53E9F1, 5);
 }
 
 }

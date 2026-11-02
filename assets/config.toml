@@ -73,6 +73,9 @@ angle-back  = 75.0 # 0-90 degrees
 
 [fancy-map]
 enabled = true
+# Modern WidescreenFix partially implements features from this tweak and also breaks some of the math.
+# Set to false if you are using WidescreenFix's legacy mode or an older version.
+widescreen-fix-compat = true
 # Removes light blue background. Requires transparent menu to work properly.
 remove-bg = true
 # Replaces painfully slow scrolling with dragging.
@@ -83,6 +86,8 @@ cursor-without-crosshair = false
 fix-speed = true
 # The help text may still occupy some space.
 hide-help-text = false
+# Hides the "BACK" button as the name suggests.
+hide-back-button = true
 
 [transparent-menu]
 enabled = true
