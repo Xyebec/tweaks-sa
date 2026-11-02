@@ -1,9 +1,13 @@
 #pragma once
+#include <ranges>
 #include <toml++/toml.hpp>
 #include <boost/pfr.hpp>
 #include <expected>
 #include <filesystem>
-#include <memory_resource>
+#include <magic_enum/magic_enum.hpp>
+#include <stdexcept>
+#include <type_traits>
+#include <variant>
 
 template <size_t N>
 struct FixedString final {
@@ -68,24 +72,57 @@ public:
         );
     };
 
+    class InvalidEnumValue : public std::runtime_error {
+    public:
+        explicit InvalidEnumValue(std::string_view path, int64_t value);
+        explicit InvalidEnumValue(std::string_view path, std::string_view value);
+    };
+
+    struct PathNode {
+        const PathNode* parent = nullptr;
+        std::variant<std::string_view, size_t> segment;
+
+        auto ToString() const -> std::string;
+    };
+
     struct Context {
-        const std::pmr::polymorphic_allocator<char>& alloc; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
-        std::string_view path;
+        PathNode path;
         const toml::node* node;
 
         template <typename T>
-        auto GetNodeAs() const {
+        const auto& GetNodeAs() const {
             if (node == nullptr) {
-                throw FieldNotFoundError{path};
+                throw FieldNotFoundError{path.ToString()};
             }
 
             const auto* value = node->as<T>();
             if (value == nullptr) {
-                constexpr auto expectedType = TypeToString<T>();
-                throw BadTypeError{path, expectedType};
+                throw BadTypeError{path.ToString(), TypeToString<T>()};
             }
 
-            return value;
+            return *value;
+        }
+
+        auto Subcontext(std::string_view key, const toml::node* node) const -> Context {
+            return Context{PathNode{&path, key}, node};
+        }
+        
+        auto Subcontext(size_t index, const toml::node* node) const -> Context {
+            return Context{PathNode{&path, index}, node};
+        }
+
+        auto GetTableChildren() const {
+            if (node == nullptr) { throw FieldNotFoundError{path.ToString()}; }
+            const auto* tbl = node->as_table();
+            if (tbl == nullptr) { throw BadTypeError{path.ToString(), "table"}; }
+
+            return *tbl | std::ranges::views::transform([this](const auto& pair) {
+                const auto keyView = std::string_view{pair.first.data(), pair.first.length()};
+                return std::pair<std::string_view, Context>{
+                    keyView, 
+                    this->Subcontext(keyView, &pair.second)
+                };
+            });
         }
     };
 
@@ -99,11 +136,7 @@ public:
     
     template <typename T>
     auto Deserialize(std::string_view key) const -> T {
-        char buf[4096];
-        auto arena = std::pmr::monotonic_buffer_resource{buf, sizeof(buf)};
-
-        const auto view = m_root.at_path(key);
-        return De<T>::Deserialize({ &arena, key, view.node() });
+        return De<T>::Deserialize({ PathNode{nullptr, key}, m_root.at_path(key).node() });
     }
     
     template <typename T>
@@ -150,26 +183,6 @@ private:
         return kebab;
     }
 
-    static auto CreatePathBuf(const std::pmr::polymorphic_allocator<char>& alloc, std::string_view basePath) -> std::pmr::string {
-        auto pathBuf = std::pmr::string{alloc};
-        pathBuf.reserve(basePath.length() + 32);
-        pathBuf = basePath;
-        return pathBuf;
-    };
-
-    static void AppendIndex(std::pmr::string& pathBuf, size_t index) {
-        pathBuf += '[';
-
-        char buf[std::numeric_limits<size_t>::digits10 + 1];
-        if (const auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), index); ec == std::errc{}) {
-            pathBuf.append(buf, ptr - buf);
-        } else {
-            pathBuf += '?';
-        }
-
-        pathBuf += ']';
-    }
-
     template <typename T>
     static constexpr std::string_view TypeToString() = delete;
 
@@ -190,7 +203,7 @@ template <> constexpr std::string_view Config::TypeToString<toml::table>()     {
 template <>
 struct Config::De<std::string> {
     static auto Deserialize(const Context& ctx) -> std::string {
-        return **ctx.GetNodeAs<std::string>();
+        return *ctx.GetNodeAs<std::string>();
     }
 };
 
@@ -199,21 +212,21 @@ requires std::is_integral_v<T>
 struct Config::De<T> {
     static auto Deserialize(const Context& ctx) -> T {
         if constexpr (std::is_same_v<T, bool>) {
-            return **ctx.GetNodeAs<bool>();
+            return *ctx.GetNodeAs<bool>();
         } else {
-            const auto* integer = ctx.GetNodeAs<int64_t>();
+            const auto integer = *ctx.GetNodeAs<int64_t>();
             if constexpr (std::is_unsigned_v<T>) {
-                if (**integer < 0) {
-                    throw SignedUnsignedMismatchError{ctx.path};
+                if (integer < 0) {
+                    throw SignedUnsignedMismatchError{ctx.path.ToString()};
                 }
             }
 
             using Limits = std::numeric_limits<T>;
-            if (**integer < Limits::min() || **integer > Limits::max()) {
-                throw ValueOutOfBoundsError{ctx.path, Limits::min(), Limits::max(), **integer};
+            if (integer < Limits::min() || integer > Limits::max()) {
+                throw ValueOutOfBoundsError{ctx.path.ToString(), Limits::min(), Limits::max(), integer};
             }
 
-            return static_cast<T>(**integer);
+            return static_cast<T>(integer);
         }
     }
 };
@@ -222,11 +235,11 @@ template <typename T>
 requires std::is_floating_point_v<T>
 struct Config::De<T> {
     static auto Deserialize(const Context& ctx) -> T {
-        return static_cast<T>(**ctx.GetNodeAs<double>());
+        return static_cast<T>(*ctx.GetNodeAs<double>());
     }
 };
 
-template<typename T>
+template <typename T>
 struct Config::De<std::optional<T>> {
     static auto Deserialize(const Context& ctx) -> std::optional<T> {
         if (ctx.node != nullptr) {
@@ -240,18 +253,13 @@ struct Config::De<std::optional<T>> {
 template <typename T>
 struct Config::De<std::vector<T>> {
     static auto Deserialize(const Context& ctx) -> std::vector<T> {
-        const auto* array = ctx.GetNodeAs<toml::array>();
-
-        auto pathBuf = CreatePathBuf(ctx.alloc, ctx.path);
+        const auto& array = ctx.GetNodeAs<toml::array>();
         
         auto out = std::vector<T>{};
-        out.reserve(array->size());
+        out.reserve(array.size());
 
-        for (size_t i = 0; i < array->size(); i++) {
-            pathBuf.resize(ctx.path.length());
-            AppendIndex(pathBuf, i);
-
-            out.emplace_back(De<T>::Deserialize({ ctx.alloc, pathBuf, array->get(i) }));
+        for (const auto& [i, element] : std::views::enumerate(array)) {
+            out.emplace_back(De<T>::Deserialize(ctx.Subcontext(i, &element)));
         }
 
         return out;
@@ -261,21 +269,16 @@ struct Config::De<std::vector<T>> {
 template <typename T, size_t N>
 struct Config::De<std::array<T, N>> {
     static auto Deserialize(const Context& ctx) -> std::array<T, N> {
-        const auto* array = ctx.GetNodeAs<toml::array>();
+        const auto& array = ctx.GetNodeAs<toml::array>();
     
-        if (array->size() != N) {
-            throw SizeMismatchError{ctx.path, N, array->size()};
+        if (array.size() != N) {
+            throw SizeMismatchError{ctx.path.ToString(), N, array.size()};
         }
-
-        auto pathBuf = CreatePathBuf(ctx.alloc, ctx.path);
 
         auto out = std::array<T, N>{};
 
-        for (size_t i = 0; i < N; i++) {
-            pathBuf.resize(ctx.path.length());
-            AppendIndex(pathBuf, i);
-
-            out[i] = De<T>::Deserialize({ ctx.alloc, pathBuf, array->get(i) });
+        for (const auto& [i, element] : std::views::enumerate(array)) {
+            out[i] = De<T>::Deserialize(ctx.Subcontext(i, &element));
         }
 
         return out;
@@ -287,24 +290,19 @@ struct Config::De<std::tuple<Ts...>> {
     static auto Deserialize(const Context& ctx) -> std::tuple<Ts...> {
         static constexpr auto N = sizeof...(Ts);
 
-        const auto* array = ctx.GetNodeAs<toml::array>();
+        const auto& array = ctx.GetNodeAs<toml::array>();
     
-        if (array->size() != N) {
-            throw SizeMismatchError{ctx.path, N, array->size()};
+        if (array.size() != N) {
+            throw SizeMismatchError{ctx.path.ToString(), N, array.size()};
         }
-
-        auto pathBuf = CreatePathBuf(ctx.alloc, ctx.path);
 
         auto out = std::tuple<Ts...>{};
         auto index = size_t{0};
         std::apply(
             [&](auto&&... elems) {
                 ([&] {
-                    pathBuf.resize(ctx.path.length());
-                    AppendIndex(pathBuf, index);
-
                     using T = std::remove_cvref_t<decltype(elems)>;
-                    elems = De<T>::Deserialize({ ctx.alloc, pathBuf, array->get(index) });
+                    elems = De<T>::Deserialize(ctx.Subcontext(index, array.get(index)));
                     ++index;
                 }(), ...);
             },
@@ -315,35 +313,51 @@ struct Config::De<std::tuple<Ts...>> {
     }
 };
 
+template <typename T, typename U>
+struct Config::De<std::pair<T, U>> {
+    static auto Deserialize(const Context& ctx) -> std::pair<T, U> {
+        const auto& array = ctx.GetNodeAs<toml::array>();
+        return std::pair<T, U>{
+            De<T>::Deserialize(ctx.Subcontext(0, array.get(0))),
+            De<U>::Deserialize(ctx.Subcontext(1, array.get(1))),
+        };
+    }
+};
+
+template <typename T>
+requires std::is_enum_v<T>
+struct Config::De<T> {
+    static auto Deserialize(const Context& ctx) -> T {
+        auto value = De<std::underlying_type_t<T>>::Deserialize(ctx);
+        auto enumeration = magic_enum::enum_cast<T>(value);
+        if (!enumeration.has_value()) {
+            throw InvalidEnumValue{ctx.path.ToString(), value};
+        }
+        return *enumeration;
+    }
+};
+
 template <typename T>
 requires std::is_aggregate_v<T> && std::is_class_v<T>
 struct Config::De<T> {
     static auto Deserialize(const Context& ctx) -> T {
-        const auto* table = ctx.GetNodeAs<toml::table>();
-
-        auto pathBuf = CreatePathBuf(ctx.alloc, ctx.path);
-        pathBuf += '.';
-        const auto baseLen = pathBuf.length();
+        const auto& table = ctx.GetNodeAs<toml::table>();
 
         auto out = T{};
-        DeserializeFields(pathBuf, baseLen, out, *table, std::make_index_sequence<boost::pfr::tuple_size_v<T>>{});
+        DeserializeFields(ctx, out, table, std::make_index_sequence<boost::pfr::tuple_size_v<T>>{});
         return out;
     }
 
     template <size_t... Is>
-    static void DeserializeFields(std::pmr::string& pathBuf, size_t baseLen, T& structure, const toml::table& table, std::index_sequence<Is...> /*unused*/) {
+    static void DeserializeFields(const Context& ctx, T& structure, const toml::table& table, std::index_sequence<Is...> /*unused*/) {
         ([&]{
-            constexpr auto name = boost::pfr::get_name<Is, T>();
+            static constexpr auto name = boost::pfr::get_name<Is, T>();
             static constexpr auto kebab = ToKebabCase<FixedString<name.size()>{name}>();
             static constexpr auto key = kebab.view();
 
-            pathBuf.resize(baseLen);
-            pathBuf += key;
-
             auto& out = boost::pfr::get<Is>(structure);
             using FieldT = std::remove_cvref_t<decltype(out)>;
-            
-            out = De<FieldT>::Deserialize({ pathBuf.get_allocator(), pathBuf, table.get(key) });
+            out = De<FieldT>::Deserialize(ctx.Subcontext(key, table.get(key)));
         }(), ...);
     }
 };

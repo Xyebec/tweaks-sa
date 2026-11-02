@@ -17,6 +17,9 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 add_library(deps::boost::pfr INTERFACE IMPORTED)
 target_include_directories(deps::boost::pfr INTERFACE "lib")
 
+add_library(deps::magic_enum INTERFACE IMPORTED)
+target_include_directories(deps::magic_enum INTERFACE "lib")
+
 add_library(deps::toml INTERFACE IMPORTED)
 target_include_directories(deps::toml INTERFACE "lib")
 target_compile_definitions(deps::toml INTERFACE TOML_EXCEPTIONS=0 TOML_HEADER_ONLY=0)
@@ -61,6 +64,7 @@ configure_file(assets/config.toml ${PROJECT_NAME}.toml COPYONLY)
 
 target_link_libraries(TweaksSA PRIVATE
     deps::boost::pfr
+    deps::magic_enum
     deps::toml
     safetyhook 
     pluginsdk::gtasa
