@@ -1,14 +1,7 @@
 cmake_minimum_required(VERSION 4.1)
-
-project(TweaksSA
-  LANGUAGES C CXX
-)
+project(TweaksSA LANGUAGES CXX)
 
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
-
-if(MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-endif()
 
 # include(CheckIPOSupported)
 # check_ipo_supported(RESULT ipo_supported)
@@ -19,48 +12,57 @@ endif()
 #     message(STATUS "LTO is not supported")
 # endif()
 
-set(SRC_DIR ${PROJECT_SOURCE_DIR}/src)
-file(GLOB_RECURSE SOURCES ${SRC_DIR}/*.cpp)
-file(GLOB_RECURSE HEADERS ${SRC_DIR}/*.h)
+# Dependencies
 
-add_library(tweaks_sa SHARED ${SOURCES} ${HEADERS})
+add_library(deps::boost::pfr INTERFACE IMPORTED)
+target_include_directories(deps::boost::pfr INTERFACE "lib")
 
-target_compile_features(tweaks_sa PRIVATE cxx_std_26)
+add_library(deps::toml INTERFACE IMPORTED)
+target_include_directories(deps::toml INTERFACE "lib")
+target_compile_definitions(deps::toml INTERFACE TOML_EXCEPTIONS=0 TOML_HEADER_ONLY=0)
 
-set_target_properties(tweaks_sa PROPERTIES
+add_subdirectory("lib/safetyhook")
+
+include(FetchContent)
+FetchContent_Declare(
+  pluginsdk
+  GIT_REPOSITORY "https://github.com/Xyebec/plugin-sdk.git"
+  GIT_TAG        473cde9a17146f988528b7cb20588ea4a500e976
+)
+FetchContent_MakeAvailable(pluginsdk)
+
+# Project
+
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp" "src/*.hpp")
+add_library(TweaksSA SHARED ${SOURCES})
+target_compile_features(TweaksSA PRIVATE cxx_std_26)
+
+target_include_directories(TweaksSA PRIVATE "src")
+
+set_target_properties(TweaksSA PROPERTIES
   PREFIX ""
   SUFFIX ".asi"
   OUTPUT_NAME ${PROJECT_NAME}
 )
 
-if(NOT MSVC)
-    target_link_options(tweaks_sa
-      PRIVATE
+if(MSVC)
+    set_target_properties(TweaksSA PROPERTIES
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
+else()
+    target_link_options(TweaksSA PRIVATE
         "LINKER:--exclude-all-symbols"
-        "-static"
-        $<$<CONFIG:Release>:-s>
+        "LINKER:-static"
+        $<$<CONFIG:Release>:LINKER:-s>
     )
 endif()
 
-target_include_directories(tweaks_sa
-  PRIVATE
-    ${SRC_DIR}
-    lib/
-)
-
 configure_file(assets/config.toml ${PROJECT_NAME}.toml COPYONLY)
 
-add_subdirectory(lib/safetyhook)
-target_link_libraries(tweaks_sa PRIVATE safetyhook)
-
-include(FetchContent)
-
-FetchContent_Declare(
-  pluginsdk
-  GIT_REPOSITORY https://github.com/Xyebec/plugin-sdk.git
-  GIT_TAG        473cde9a17146f988528b7cb20588ea4a500e976
+target_link_libraries(TweaksSA PRIVATE
+    deps::boost::pfr
+    deps::toml
+    safetyhook 
+    pluginsdk::gtasa
+    d3dx9
 )
-FetchContent_MakeAvailable(pluginsdk)
-target_link_libraries(tweaks_sa PRIVATE pluginsdk::gtasa)
-
-target_link_libraries(tweaks_sa PRIVATE d3dx9)

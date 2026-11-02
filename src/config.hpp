@@ -1,7 +1,5 @@
 #pragma once
-#define TOML_EXCEPTIONS 0
-#define TOML_HEADER_ONLY 0
-#include <toml.hpp>
+#include <toml++/toml.hpp>
 #include <boost/pfr.hpp>
 #include <expected>
 #include <filesystem>
