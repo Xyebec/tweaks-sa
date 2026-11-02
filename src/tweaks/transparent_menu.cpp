@@ -109,8 +109,8 @@ extern void Apply() {
         patch::set<uint8_t>(0x57ED13 + 1, 0xAC); // R
     }
 
-    // // Keep the game from centering cursor in menu
-    // patch::nop(0x53E9F1, 5);
+    // Keep the game from centering cursor in menu
+    patch::nop(0x53E9F1, 5);
 }
 
 }
